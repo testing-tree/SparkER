@@ -1,12 +1,8 @@
 # CD_002fa7
 
-**A strict Barker notation ER diagram editor — built for clarity, built for the web.**
+**A Barker notation ER diagram editor.**
 
-&nbsp;
-
-[**→ Open Live Editor**](https://testing-tree.github.io/CD_002fa7/)
-
-&nbsp;
+[**Live Editor**](https://testing-tree.github.io/CD_002fa7/)
 
 ![Screenshot placeholder](docs/screenshot.png)
 
@@ -14,15 +10,15 @@
 
 ## Background
 
-Entity-Relationship (ER) data modelling is a foundational skill in database design, and Barker notation is the graphical standard taught in many university and professional programmes — including Ivey Business School, where this project originated.
+Entity-Relationship (ER) data modeling is a foundational skill in database design. **Barker’s Notation** remains the graphical standard taught across many universities and professional programs—including the Ivey Business School, where this project originated.
 
-The problem is that every mainstream ERD tool — Lucidchart, draw.io, dbdiagram.io, Mermaid — does not faithfully implement Barker notation, which has its own specific visual rules: solid and dashed lines for mandatory and optional relationships respectively, verb labels required on both ends of every relationship line, UID bars for weak entity identification, and exclusive relationship arcs. Students and practitioners who need strict Barker diagrams are left hand-drawing or adapting tools that were never designed for this purpose.
+The challenge is that mainstream ERD tools, such as Lucidchart, draw.io, dbdiagram.io, and Mermaid, do not fully support the specific visual syntax of Barker’s Notation. This notation requires a unique set of rules: solid and dashed lines to denote mandatory and optional relationships, verb labels at both ends of every relationship, UID bars for weak entity identification, and exclusive relationship arcs. Consequently, students and practitioners are often forced to manually draw these diagrams or struggle with tools not built for the task.
 
-This project aims to fill that gap. It is a web-based visual editor designed from the ground up to produce diagrams that fully conform to the Barker notation specification.
+This project bridges that gap. It is a custom-built, web-based visual editor designed from the ground up to generate diagrams that are fully compliant with Barker’s Notation standards.
 
-The project name comes from International Klein Blue (#002FA7) — also the cover colour of David Tao's (陶喆) self-titled debut album *David Tao* (1997). This is also the first project I have independently completed from start to finish. I chose this colour as the codename as a small memorial to the experience and as an expression of my admiration and affection for David Tao's music.
+The project name comes from **International Klein Blue (#002FA7)**, also the iconic cover color of David Tao’s self-titled debut album (1997). As this represents my first independent venture into full-scale development, the choice of color serves both as a personal milestone and a tribute to the artistry of David Tao.
 
-> 项目名称源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，以此颜色作为代号以表示我对此的一点纪念和对陶喆音乐创作的喜爱和敬意。
+> 项目名称源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，使用此颜色谨作纪念和表示对陶喆音乐创作的喜爱。
 
 ---
 
@@ -152,4 +148,3 @@ Key rules enforced or supported by this editor:
 ## Design Document
 
 The full design rationale, data schema, component architecture, and phase-by-phase task breakdown are in [`DESIGN.md`](./DESIGN.md).
-# CD_002fa7
