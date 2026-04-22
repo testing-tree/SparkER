@@ -152,3 +152,4 @@ Key rules enforced or supported by this editor:
 ## Design Document
 
 The full design rationale, data schema, component architecture, and phase-by-phase task breakdown are in [`DESIGN.md`](./DESIGN.md).
+# CD_002fa7
