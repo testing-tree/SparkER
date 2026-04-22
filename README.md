@@ -4,7 +4,7 @@
 
 [**Live Editor**](https://testing-tree.github.io/CD_002fa7/)
 
-![Screenshot placeholder](docs/screenshot.png)
+![Screenshot placeholder](./docs:/screenshot.png)
 
 ---
 
