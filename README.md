@@ -2,7 +2,7 @@
 
 **A strict Barker notation ER diagram editor** built with React, TypeScript, and React Flow.
 
-Live demo: _https://\<your-github-username\>.github.io/CD_002fa7/_
+Live demo: https://testing-tree.github.io/CD_002fa7/
 
 ---
 
