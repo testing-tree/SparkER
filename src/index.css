@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Show handles when hovering their parent node.
+   !important is needed to override React Flow's inline opacity:0 fallback. */
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1 !important;
+  transition: opacity 150ms ease;
+}

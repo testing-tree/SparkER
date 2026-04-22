@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(cp -r temp-scaffold/. .)",
+      "Bash(rm -rf temp-scaffold)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

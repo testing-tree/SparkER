@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(open -a \"Google Chrome\" http://localhost:5173)",
+      "Bash(open http://localhost:5173)",
+      "Bash(screencapture -x /tmp/barker-edge-screenshot.png)",
+      "Bash(npx tsc *)",
+      "Bash(git -C /Users/dchenye/Library/CloudStorage/OneDrive-Personal/Coding/barker-erd remote -v)"
+    ]
+  }
+}
