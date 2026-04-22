@@ -47,12 +47,16 @@ function InlineInput({
   onChange,
   onCommit,
   onCancel,
+  onEnter,
+  onDeleteEmpty,
   className = '',
 }: {
   value: string
   onChange: (v: string) => void
   onCommit: () => void
   onCancel: () => void
+  onEnter?: () => void
+  onDeleteEmpty?: () => void
   className?: string
 }) {
   return (
@@ -60,10 +64,14 @@ function InlineInput({
       autoFocus
       value={value}
       onChange={e => onChange(e.target.value)}
+      onFocus={e => e.target.select()}
       onBlur={onCommit}
       onKeyDown={e => {
-        if (e.key === 'Enter')  { e.preventDefault(); onCommit() }
+        if (e.key === 'Enter')  { e.preventDefault(); (onEnter ?? onCommit)() }
         if (e.key === 'Escape') { e.preventDefault(); onCancel() }
+        if ((e.key === 'Backspace' || e.key === 'Delete') && value === '' && onDeleteEmpty) {
+          e.preventDefault(); onDeleteEmpty()
+        }
         e.stopPropagation()
       }}
       className={`bg-transparent outline-none ${className}`}
@@ -80,6 +88,8 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   const entity       = useDiagramStore(s => s.diagram.entities.find(e => e.id === entityId))
   const updateEntity = useDiagramStore(s => s.updateEntity)
   const updateAttr   = useDiagramStore(s => s.updateAttribute)
+  const addAttr      = useDiagramStore(s => s.addAttribute)
+  const deleteAttr   = useDiagramStore(s => s.deleteAttribute)
 
   const [editingName,   setEditingName]   = useState(false)
   const [nameVal,       setNameVal]       = useState('')
@@ -144,9 +154,28 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
     updateNodeInternals(id)
   }
 
+  const commitAttrAndContinue = (attr: Attribute) => {
+    const v = attrVal.trim().toLowerCase()
+    if (v) updateAttr(entityId, attr.id, { name: v })
+    useDiagramStore.temporal.getState().resume()
+    // Add next attribute (always 'required' since at least one already exists) and edit it.
+    const newId = addAttr(entityId, { name: 'attribute', kind: 'required' })
+    useDiagramStore.temporal.getState().pause()
+    setAttrVal('attribute')
+    setEditingAttrId(newId)
+    updateNodeInternals(id)
+  }
+
   const cancelAttr = () => {
     useDiagramStore.temporal.getState().resume()
     setEditingAttrId(null)
+  }
+
+  const deleteEditingAttr = (attr: Attribute) => {
+    useDiagramStore.temporal.getState().resume()
+    deleteAttr(entityId, attr.id)
+    setEditingAttrId(null)
+    updateNodeInternals(id)
   }
 
   // ── Render ─────────────────────────────────────────────────────
@@ -201,7 +230,9 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                 value={attrVal}
                 onChange={setAttrVal}
                 onCommit={() => commitAttr(attr)}
+                onEnter={() => commitAttrAndContinue(attr)}
                 onCancel={cancelAttr}
+                onDeleteEmpty={() => deleteEditingAttr(attr)}
                 className="flex-1 text-gray-700"
               />
             ) : (

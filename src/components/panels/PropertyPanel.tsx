@@ -218,7 +218,7 @@ export default function PropertyPanel() {
               const tgtEntity = diagram.entities.find(e => e.id === rel.targetEntityId)
               return (
                 <div className="space-y-4">
-                  <EndSection title="Target end" entityName={tgtEntity?.name} end={rel.targetEnd} relId={rel.id} endKey="target" />
+                  <EndSection title="Source end" entityName={srcEntity?.name} end={rel.sourceEnd} relId={rel.id} endKey="source" />
                   <hr className="border-gray-200" />
                   {rel.sourceEnd.cardinality === 'many' && rel.targetEnd.cardinality === 'many' && (
                     <div className="rounded border border-yellow-400 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 leading-snug">
@@ -226,7 +226,7 @@ export default function PropertyPanel() {
                       Add an intersection entity between these two.
                     </div>
                   )}
-                  <EndSection title="Source end" entityName={srcEntity?.name} end={rel.sourceEnd} relId={rel.id} endKey="source" />
+                  <EndSection title="Target end" entityName={tgtEntity?.name} end={rel.targetEnd} relId={rel.id} endKey="target" />
                 </div>
               )
             })()

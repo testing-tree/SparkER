@@ -81,10 +81,10 @@ function uidBarPath(ex: number, ey: number, pos: Position): string {
 }
 
 function labelPos(ex: number, ey: number, pos: Position, flipped = false): [number, number, string] {
-  if (pos === Position.Right)  return [ex + 22, flipped ? ey + 14 : ey - 10, 'start']
-  if (pos === Position.Left)   return [ex - 22, flipped ? ey + 14 : ey - 10, 'end']
-  if (pos === Position.Top)    return [flipped ? ex - 14 : ex + 8, ey - 22, 'start']
-  return                              [flipped ? ex - 14 : ex + 8, ey + 22, 'start']
+  if (pos === Position.Right)  return [ex + 16, flipped ? ey + 14 : ey - 10, 'start']
+  if (pos === Position.Left)   return [ex - 16, flipped ? ey + 14 : ey - 10, 'end']
+  if (pos === Position.Top)    return [flipped ? ex - 8 : ex + 8, ey - 16, flipped ? 'end' : 'start']
+  return                              [flipped ? ex - 8 : ex + 8, ey + 16, flipped ? 'end' : 'start']
 }
 
 // Same layout logic, reused for self-loop exits/entries
@@ -228,7 +228,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
           const [lx, ly, anchor] = loopLabelPos(g.exitX, g.exitY, g.exitPos, rel.sourceEnd.labelFlipped ?? false)
           return (
             <text x={lx} y={ly} textAnchor={anchor as never}
-              fontSize={10} fill={stroke} stroke="none" dominantBaseline="middle"
+              fontSize={11} fill={stroke} stroke="none" dominantBaseline="middle"
               style={{ cursor: 'pointer' }}
               onClick={e => { e.stopPropagation(); updateRelationshipEnd(id, 'source', { labelFlipped: !(rel.sourceEnd.labelFlipped ?? false) }) }}>
               {rel.sourceEnd.label}
@@ -239,7 +239,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
           const [lx, ly, anchor] = loopLabelPos(g.entryX, g.entryY, g.entryPos, rel.targetEnd.labelFlipped ?? false)
           return (
             <text x={lx} y={ly} textAnchor={anchor as never}
-              fontSize={10} fill={stroke} stroke="none" dominantBaseline="middle"
+              fontSize={11} fill={stroke} stroke="none" dominantBaseline="middle"
               style={{ cursor: 'pointer' }}
               onClick={e => { e.stopPropagation(); updateRelationshipEnd(id, 'target', { labelFlipped: !(rel.targetEnd.labelFlipped ?? false) }) }}>
               {rel.targetEnd.label}
@@ -359,7 +359,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
       {/* Verb labels */}
       {rel.sourceEnd.label && (
         <text x={slX} y={slY} textAnchor={slAnchor as never}
-          fontSize={10} fill={stroke} stroke="none" dominantBaseline="middle"
+          fontSize={11} fill={stroke} stroke="none" dominantBaseline="middle"
           style={{ cursor: 'pointer' }}
           onClick={e => { e.stopPropagation(); updateRelationshipEnd(id, 'source', { labelFlipped: !(rel.sourceEnd.labelFlipped ?? false) }) }}>
           {rel.sourceEnd.label}
@@ -367,7 +367,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
       )}
       {rel.targetEnd.label && (
         <text x={tlX} y={tlY} textAnchor={tlAnchor as never}
-          fontSize={10} fill={stroke} stroke="none" dominantBaseline="middle"
+          fontSize={11} fill={stroke} stroke="none" dominantBaseline="middle"
           style={{ cursor: 'pointer' }}
           onClick={e => { e.stopPropagation(); updateRelationshipEnd(id, 'target', { labelFlipped: !(rel.targetEnd.labelFlipped ?? false) }) }}>
           {rel.targetEnd.label}

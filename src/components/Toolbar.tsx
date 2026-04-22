@@ -123,7 +123,10 @@ export default function Toolbar() {
     setSqlText(toSQL(diagram))
   }, [diagram])
 
-  const oneEntity = selection.entityIds.length === 1
+  const oneEntity     = selection.entityIds.length === 1
+  const selectedEntity = oneEntity
+    ? diagram.entities.find(e => e.id === selection.entityIds[0])
+    : undefined
 
   return (
     <>
@@ -143,7 +146,10 @@ export default function Toolbar() {
           {oneEntity && (
             <>
               <button
-                onClick={() => addAttribute(selection.entityIds[0], { name: 'attribute', kind: 'identifier' })}
+                onClick={() => {
+                  const kind = (selectedEntity?.attributes.length ?? 0) === 0 ? 'identifier' : 'required'
+                  addAttribute(selection.entityIds[0], { name: 'attribute', kind })
+                }}
                 className={BTN}
               >
                 Add Attribute

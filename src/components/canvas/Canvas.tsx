@@ -14,6 +14,7 @@ import {
   type OnNodesDelete,
   type OnEdgesDelete,
   type OnSelectionChangeParams,
+  type OnConnectStartParams,
 } from '@xyflow/react'
 
 import { useDiagramStore } from '../../store/diagramStore'
@@ -79,6 +80,7 @@ export default function Canvas() {
 
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({})
   const guidesRef = useRef<{ x?: number; y?: number }>({})
+  const connectStartNodeId = useRef<string | null>(null)
 
   // Sync store entities → RF nodes: add new ones AND update positions (enables undo sync).
   useEffect(() => {
@@ -123,20 +125,34 @@ export default function Canvas() {
     })
   }, [onNodesChange, updateEntity])
 
+  // Record the drag-start node so onConnect can normalize source/target.
+  // When a user grabs a "target"-type handle, ReactFlow inverts connection.source/target.
+  const onConnectStart = useCallback((_: MouseEvent | TouchEvent, params: OnConnectStartParams) => {
+    connectStartNodeId.current = params.nodeId ?? null
+  }, [])
+
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target) return
+
+    // If ReactFlow swapped source/target (user grabbed a target-type handle to start
+    // dragging), the actual drag-start node ends up in connection.target. Normalize.
+    const dragStart = connectStartNodeId.current
+    const swapped = dragStart !== null && dragStart === connection.target
+    const src = swapped ? connection.target : connection.source
+    const tgt = swapped ? connection.source : connection.target
+
     const rels = useDiagramStore.getState().diagram.relationships
     const isDupe = rels.some(
       r =>
-        (r.sourceEntityId === connection.source && r.targetEntityId === connection.target) ||
-        (r.sourceEntityId === connection.target && r.targetEntityId === connection.source)
+        (r.sourceEntityId === src && r.targetEntityId === tgt) ||
+        (r.sourceEntityId === tgt && r.targetEntityId === src)
     )
     if (isDupe) return
 
-    const isSelf = connection.source === connection.target
+    const isSelf = src === tgt
     addRelationship({
-      sourceEntityId: connection.source,
-      targetEntityId: connection.target,
+      sourceEntityId: src,
+      targetEntityId: tgt,
       sourceEnd: { cardinality: 'one',                    optionality: isSelf ? 'optional' : 'mandatory', label: '', uidBar: false },
       targetEnd: { cardinality: isSelf ? 'many' : 'one', optionality: isSelf ? 'optional' : 'mandatory', label: '', uidBar: false },
       ...(isSelf && {
@@ -228,6 +244,7 @@ export default function Canvas() {
       edgeTypes={edgeTypes}
       onNodesChange={handleNodesChange}
       onEdgesChange={onEdgesChange}
+      onConnectStart={onConnectStart}
       onConnect={onConnect}
       onNodeDrag={onNodeDrag}
       onNodeDragStop={onNodeDragStop}

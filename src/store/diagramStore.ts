@@ -39,7 +39,7 @@ export interface DiagramStore {
   deleteEntity(id: string): void
 
   // Attribute actions
-  addAttribute(entityId: string, partial: Partial<Omit<Attribute, 'id' | 'order'>>): void
+  addAttribute(entityId: string, partial: Partial<Omit<Attribute, 'id' | 'order'>>): string
   updateAttribute(entityId: string, attrId: string, patch: Partial<Omit<Attribute, 'id'>>): void
   deleteAttribute(entityId: string, attrId: string): void
   reorderAttributes(entityId: string, newOrder: string[]): void
@@ -128,7 +128,7 @@ export const useDiagramStore = create<DiagramStore>()(
 
       addAttribute(entityId, partial) {
         const entity = get().diagram.entities.find(e => e.id === entityId)
-        if (!entity) return
+        if (!entity) return ''
         const order = entity.attributes.length
         const attr: Attribute = {
           name: 'attribute',
@@ -148,6 +148,7 @@ export const useDiagramStore = create<DiagramStore>()(
             updatedAt: now(),
           },
         }))
+        return attr.id
       },
 
       updateAttribute(entityId, attrId, patch) {
