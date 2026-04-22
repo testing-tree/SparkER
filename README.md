@@ -14,13 +14,15 @@
 
 ## Background
 
-Entity-Relationship (ER) data modelling is a foundational skill in database design, and **Barker notation** is the graphical standard taught in many university and professional programmes (including at Ivey Business School, where this project originated).
+Entity-Relationship (ER) data modelling is a foundational skill in database design, and Barker notation is the graphical standard taught in many university and professional programmes — including Ivey Business School, where this project originated.
 
-The problem: every mainstream ERD tool — Lucidchart, draw.io, dbdiagram.io, Mermaid — uses crow's foot notation or its variants. None of them faithfully implement Barker notation, which has its own specific visual rules: mandatory vs. optional relationships expressed via solid and dashed lines, verb labels required on *both* ends of every relationship line, UID bars for weak entity identification, and exclusive relationship arcs. Students and practitioners who need strict Barker diagrams are left hand-drawing or awkwardly adapting the wrong tools.
+The problem is that every mainstream ERD tool — Lucidchart, draw.io, dbdiagram.io, Mermaid — does not faithfully implement Barker notation, which has its own specific visual rules: solid and dashed lines for mandatory and optional relationships respectively, verb labels required on both ends of every relationship line, UID bars for weak entity identification, and exclusive relationship arcs. Students and practitioners who need strict Barker diagrams are left hand-drawing or adapting tools that were never designed for this purpose.
 
-CD_002fa7 fills that gap. It is a web-based visual editor designed from the ground up to produce diagrams that match the Barker notation specification, with no compromises.
+This project aims to fill that gap. It is a web-based visual editor designed from the ground up to produce diagrams that fully conform to the Barker notation specification.
 
-The name comes from International Klein Blue (#002FA7) — the colour used throughout the interface. It is also the colour of the cover of *David Tao* (1997), the first album by Taiwanese musician 陶喆 (David Tao). This is the first completed project built on that colour.
+The project name comes from International Klein Blue (#002FA7) — also the cover colour of David Tao's (陶喆) self-titled debut album *David Tao* (1997). This is also the first project I have independently completed from start to finish. I chose this colour as the codename as a small memorial to the experience and as an expression of my admiration and affection for David Tao's music.
+
+> 项目名称源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，以此颜色作为代号以表示我对此的一点纪念和对陶喆音乐创作的喜爱和敬意。
 
 ---
 
@@ -144,21 +146,6 @@ Key rules enforced or supported by this editor:
 | State management | Zustand v5 |
 | Undo / Redo | zundo |
 | Image export | html-to-image |
-
----
-
-## Local Development
-
-```bash
-npm install
-npm run dev
-```
-
-To deploy to GitHub Pages:
-
-```bash
-npm run deploy
-```
 
 ---
 

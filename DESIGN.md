@@ -1,3 +1,5 @@
+> This project was developed with the assistance of Claude Code (Anthropic). DESIGN.md served as the primary context document across all development sessions.
+
 # ER Diagram Editor: Design Document
 
 **Project codename:** `CD_002fa7` (#002FA7)
@@ -424,3 +426,18 @@ All design work is complete. No code has been written yet. The immediate next st
 ### Reference
 
 The canonical Barker notation spec is Ivey technical note W38454 by Derrick Neufeld (2024). A copy should be kept in the project under `docs/W38454.pdf` for reference. All visual conventions and rule enforcement should match this document.
+
+---
+
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+To deploy to GitHub Pages:
+
+```bash
+npm run deploy
+```
