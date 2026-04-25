@@ -81,27 +81,36 @@ function InlineInput({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+// Separator Y for the super-entity divider line (same formula used in addSubEntity)
+function separatorY(attrCount: number): number {
+  const NAME_H   = 42
+  const ATTR_ROW = 22
+  const ATTR_PAD = 8
+  const attrH    = Math.max(40, attrCount * ATTR_ROW + ATTR_PAD)
+  return Math.max(120, NAME_H + attrH + 8)
+}
+
 export default function EntityNode({ id, data, selected }: NodeProps) {
   const entityId = (data as EntityNodeData).entityId
 
   const updateNodeInternals = useUpdateNodeInternals()
-  const entity       = useDiagramStore(s => s.diagram.entities.find(e => e.id === entityId))
-  const updateEntity = useDiagramStore(s => s.updateEntity)
-  const updateAttr   = useDiagramStore(s => s.updateAttribute)
-  const addAttr      = useDiagramStore(s => s.addAttribute)
-  const deleteAttr   = useDiagramStore(s => s.deleteAttribute)
+  const entity         = useDiagramStore(s => s.diagram.entities.find(e => e.id === entityId))
+  const hasSubEntities = useDiagramStore(s => s.diagram.entities.some(e => e.parentEntityId === entityId))
+  const updateEntity   = useDiagramStore(s => s.updateEntity)
+  const updateAttr     = useDiagramStore(s => s.updateAttribute)
+  const addAttr        = useDiagramStore(s => s.addAttribute)
+  const deleteAttr     = useDiagramStore(s => s.deleteAttribute)
 
   const [editingName,   setEditingName]   = useState(false)
   const [nameVal,       setNameVal]       = useState('')
   const [editingAttrId, setEditingAttrId] = useState<string | null>(null)
   const [attrVal,       setAttrVal]       = useState('')
 
-  // Re-sync edge routing after any entity content change (name, attributes) so edges
-  // re-attach to the correct handle positions after the DOM has updated.
+  // Re-sync edge routing after any entity content change so edges re-attach correctly.
   useEffect(() => {
     const timer = setTimeout(() => updateNodeInternals(id), 0)
     return () => clearTimeout(timer)
-  }, [entity?.name, entity?.attributes, id, updateNodeInternals])
+  }, [entity?.name, entity?.attributes, entity?.size, id, updateNodeInternals])
 
   if (!entity) return null
 
@@ -180,10 +189,23 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
 
   // ── Render ─────────────────────────────────────────────────────
 
+  const isSuperEntity = hasSubEntities
+  const isSubEntity   = !!entity.parentEntityId
+
   return (
-    <div className={`relative min-w-40 rounded-lg border-2 bg-white shadow-sm select-none ${
-      selected ? 'border-blue-400 ring-2 ring-blue-400' : 'border-gray-800'
-    }`}>
+    <div
+      className={`relative rounded-lg border-2 bg-white shadow-sm select-none ${
+        selected
+          ? 'border-blue-400 ring-2 ring-blue-400'
+          : isSubEntity
+            ? 'border-gray-500'
+            : 'border-gray-800'
+      }`}
+      style={entity.size
+        ? { width: entity.size.width, height: entity.size.height }
+        : { minWidth: 160 }
+      }
+    >
       {SIDES.map(pos => (
         <span key={pos}>
           <Handle type="source" position={pos} id={`${pos}-source`} style={HANDLE_STYLES[pos]} />
@@ -249,6 +271,18 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
           </div>
         ))}
       </div>
+
+      {/* Super-entity separator — horizontal divider below the attribute zone */}
+      {isSuperEntity && (
+        <div
+          className="absolute left-0 right-0 border-t-2 border-gray-800 pointer-events-none"
+          style={{ top: separatorY(sorted.length) }}
+        >
+          <span className="absolute left-3 top-0.5 text-[9px] font-medium text-gray-400 uppercase tracking-widest select-none">
+            sub-entities
+          </span>
+        </div>
+      )}
     </div>
   )
 }

@@ -37,6 +37,7 @@ export interface DiagramStore {
   addEntity(partial: Partial<Omit<Entity, 'id'>>): string
   updateEntity(id: string, patch: Partial<Omit<Entity, 'id'>>): void
   deleteEntity(id: string): void
+  addSubEntity(superEntityId: string, partial: Partial<Omit<Entity, 'id' | 'parentEntityId'>>): string
 
   // Attribute actions
   addAttribute(entityId: string, partial: Partial<Omit<Attribute, 'id' | 'order'>>): string
@@ -111,17 +112,73 @@ export const useDiagramStore = create<DiagramStore>()(
       },
 
       deleteEntity(id) {
+        set(s => {
+          // Cascade-delete sub-entities that belong to this super-entity
+          const toDelete = new Set([id, ...s.diagram.entities.filter(e => e.parentEntityId === id).map(e => e.id)])
+          return {
+            diagram: {
+              ...s.diagram,
+              entities: s.diagram.entities.filter(e => !toDelete.has(e.id)),
+              relationships: s.diagram.relationships.filter(
+                r => !toDelete.has(r.sourceEntityId) && !toDelete.has(r.targetEntityId)
+              ),
+              exclusiveArcs: s.diagram.exclusiveArcs.filter(a => !toDelete.has(a.sourceEntityId)),
+              updatedAt: now(),
+            },
+          }
+        })
+      },
+
+      addSubEntity(superEntityId, partial) {
+        const superEntity = get().diagram.entities.find(e => e.id === superEntityId)
+        if (!superEntity) return ''
+
+        const existingChildren = get().diagram.entities.filter(e => e.parentEntityId === superEntityId)
+        const childIndex = existingChildren.length
+
+        // Estimate super-entity header height based on its current attributes
+        const NAME_H    = 42  // name section: min-h-40 + 2px border-b
+        const ATTR_ROW  = 22  // text-sm + py-0.5 per attribute row
+        const ATTR_PAD  = 8
+        const attrH     = Math.max(40, superEntity.attributes.length * ATTR_ROW + ATTR_PAD)
+        const SEP_GAP   = 36  // separator line + label + breathing room
+        const SUB_START_Y  = Math.max(120, NAME_H + attrH + SEP_GAP)
+
+        const SUB_W       = 168
+        const SUB_H_EST   = 100
+        const SUB_PADDING = 16
+
+        const subPosition = {
+          x: SUB_PADDING + childIndex * (SUB_W + SUB_PADDING),
+          y: SUB_START_Y,
+        }
+
+        const subId = crypto.randomUUID()
+        const subEntity: Entity = {
+          name: 'SUB_ENTITY',
+          attributes: [],
+          position: subPosition,
+          ...partial,
+          id: subId,
+          parentEntityId: superEntityId,
+        }
+
+        // Expand super-entity to contain the new child
+        const requiredW = Math.max(superEntity.size?.width  ?? 0, subPosition.x + SUB_W + SUB_PADDING, 280)
+        const requiredH = Math.max(superEntity.size?.height ?? 0, SUB_START_Y + SUB_H_EST + 20, 260)
+        const newSize = { width: requiredW, height: requiredH }
+
         set(s => ({
           diagram: {
             ...s.diagram,
-            entities: s.diagram.entities.filter(e => e.id !== id),
-            relationships: s.diagram.relationships.filter(
-              r => r.sourceEntityId !== id && r.targetEntityId !== id
-            ),
-            exclusiveArcs: s.diagram.exclusiveArcs.filter(a => a.sourceEntityId !== id),
+            entities: [
+              ...s.diagram.entities.map(e => e.id === superEntityId ? { ...e, size: newSize } : e),
+              subEntity,
+            ],
             updatedAt: now(),
           },
         }))
+        return subId
       },
 
       // ── Attribute ────────────────────────────────────────────────

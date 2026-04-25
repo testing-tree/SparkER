@@ -17,6 +17,7 @@ export default function Toolbar() {
   const addEntity          = useDiagramStore(s => s.addEntity)
   const addAttribute       = useDiagramStore(s => s.addAttribute)
   const addRelationship    = useDiagramStore(s => s.addRelationship)
+  const addSubEntity       = useDiagramStore(s => s.addSubEntity)
   const setDiagramName     = useDiagramStore(s => s.setDiagramName)
   const saveToJSON         = useDiagramStore(s => s.saveToJSON)
   const loadFromJSON       = useDiagramStore(s => s.loadFromJSON)
@@ -164,6 +165,16 @@ export default function Toolbar() {
                 className={BTN}
               >
                 Recursive
+              </button>
+              <button
+                onClick={() => {
+                  const name = window.prompt('Sub-entity name:')
+                  if (!name?.trim()) return
+                  addSubEntity(selection.entityIds[0], { name: name.trim().toUpperCase(), attributes: [] })
+                }}
+                className={BTN}
+              >
+                Add Sub-entity
               </button>
               <button
                 onClick={() => {

@@ -157,15 +157,16 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
         onChange={v => updateRelationshipEnd(rel.id, 'target', { cardinality: v as 'one' | 'many' })}
       />
       <Toggle
-        label="Optionality"
+        label="Exit opt."
+        options={['mandatory', 'optional']}
+        value={rel.sourceEnd.optionality}
+        onChange={v => updateRelationshipEnd(rel.id, 'source', { optionality: v as 'mandatory' | 'optional' })}
+      />
+      <Toggle
+        label="Entry opt."
         options={['mandatory', 'optional']}
         value={rel.targetEnd.optionality}
-        onChange={v => {
-          useDiagramStore.temporal.getState().pause()
-          updateRelationshipEnd(rel.id, 'source', { optionality: v as 'mandatory' | 'optional' })
-          updateRelationshipEnd(rel.id, 'target', { optionality: v as 'mandatory' | 'optional' })
-          useDiagramStore.temporal.getState().resume()
-        }}
+        onChange={v => updateRelationshipEnd(rel.id, 'target', { optionality: v as 'mandatory' | 'optional' })}
       />
       <div className="flex items-center gap-2">
         <span className="text-xs text-gray-500 w-20 shrink-0">UID bar</span>
@@ -202,13 +203,32 @@ export default function PropertyPanel() {
     <div className="shrink-0 h-full border-l border-gray-200 bg-white overflow-y-auto overflow-x-hidden p-4 space-y-4" style={{ minWidth: 280, width: 280 }}>
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Properties</p>
 
-      {entity && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Entity</p>
-          <p className="text-sm font-bold text-gray-900">{entity.name}</p>
-          <p className="text-xs text-gray-400 italic">Double-click on canvas to rename.</p>
-        </div>
-      )}
+      {entity && (() => {
+        const superEntity = entity.parentEntityId
+          ? diagram.entities.find(e => e.id === entity.parentEntityId)
+          : null
+        const subEntities = diagram.entities.filter(e => e.parentEntityId === entity.id)
+        return (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {superEntity ? 'Sub-entity' : subEntities.length > 0 ? 'Super-entity' : 'Entity'}
+            </p>
+            <p className="text-sm font-bold text-gray-900">{entity.name}</p>
+            {superEntity && (
+              <p className="text-xs text-gray-500">
+                of <span className="font-semibold text-gray-700">{superEntity.name}</span>
+              </p>
+            )}
+            {subEntities.length > 0 && (
+              <p className="text-xs text-gray-500">
+                {subEntities.length} sub-entit{subEntities.length === 1 ? 'y' : 'ies'}:{' '}
+                {subEntities.map(s => s.name).join(', ')}
+              </p>
+            )}
+            <p className="text-xs text-gray-400 italic">Double-click on canvas to rename.</p>
+          </div>
+        )
+      })()}
 
       {rel && (
         rel.sourceEntityId === rel.targetEntityId

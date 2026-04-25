@@ -50,6 +50,10 @@ function entityToNode(entity: Entity): Node<EntityNodeData> {
     type:     'entityNode',
     position: entity.position,
     data:     { entityId: entity.id },
+    ...(entity.parentEntityId ? {
+      parentId: entity.parentEntityId,
+      extent:   'parent' as const,
+    } : {}),
   }
 }
 
@@ -82,15 +86,21 @@ export default function Canvas() {
   const guidesRef = useRef<{ x?: number; y?: number }>({})
   const connectStartNodeId = useRef<string | null>(null)
 
-  // Sync store entities → RF nodes: add new ones AND update positions (enables undo sync).
+  // Sync store entities → RF nodes: add new ones AND update positions / parentId (enables undo sync).
   useEffect(() => {
     setNodes(prev => {
       const entityMap = new Map(diagram.entities.map(e => [e.id, e]))
       const updated = prev.map(n => {
         const e = entityMap.get(n.id)
         if (!e) return n
-        if (n.position.x === e.position.x && n.position.y === e.position.y) return n
-        return { ...n, position: e.position }
+        const posChanged    = n.position.x !== e.position.x || n.position.y !== e.position.y
+        const parentChanged = n.parentId !== e.parentEntityId
+        if (!posChanged && !parentChanged) return n
+        return {
+          ...n,
+          position: e.position,
+          ...(e.parentEntityId ? { parentId: e.parentEntityId, extent: 'parent' as const } : { parentId: undefined, extent: undefined }),
+        }
       })
       const prevIds = new Set(prev.map(n => n.id))
       const toAdd = diagram.entities
@@ -164,13 +174,15 @@ export default function Canvas() {
     })
   }, [addRelationship])
 
-  // Detect center alignment with other nodes during drag.
+  // Detect center alignment with other nodes during drag (skip sub-entities — their
+  // positions are relative to the parent and don't align with the absolute grid).
   const onNodeDrag: OnNodeDrag = useCallback((_evt, draggedNode) => {
+    if (draggedNode.parentId) return
     const dCx = draggedNode.position.x + (draggedNode.measured?.width  ?? 150) / 2
     const dCy = draggedNode.position.y + (draggedNode.measured?.height ?? 100) / 2
     const newGuides: { x?: number; y?: number } = {}
     nodes.forEach(node => {
-      if (node.id === draggedNode.id) return
+      if (node.id === draggedNode.id || node.parentId) return
       const cx = node.position.x + (node.measured?.width  ?? 150) / 2
       const cy = node.position.y + (node.measured?.height ?? 100) / 2
       if (Math.abs(dCx - cx) < SNAP_THRESHOLD) newGuides.x = cx
@@ -182,15 +194,17 @@ export default function Canvas() {
 
   // Apply snap and write final position to store (creates undo entry when snap occurs).
   const onNodeDragStop: OnNodeDrag = useCallback((_evt, node) => {
-    const g = guidesRef.current
-    if (g.x !== undefined || g.y !== undefined) {
-      const w = node.measured?.width  ?? 150
-      const h = node.measured?.height ?? 100
-      let { x, y } = node.position
-      if (g.x !== undefined) x = g.x - w / 2
-      if (g.y !== undefined) y = g.y - h / 2
-      setNodes(prev => prev.map(n => n.id === node.id ? { ...n, position: { x, y } } : n))
-      updateEntity(node.id, { position: { x, y } })
+    if (!node.parentId) {
+      const g = guidesRef.current
+      if (g.x !== undefined || g.y !== undefined) {
+        const w = node.measured?.width  ?? 150
+        const h = node.measured?.height ?? 100
+        let { x, y } = node.position
+        if (g.x !== undefined) x = g.x - w / 2
+        if (g.y !== undefined) y = g.y - h / 2
+        setNodes(prev => prev.map(n => n.id === node.id ? { ...n, position: { x, y } } : n))
+        updateEntity(node.id, { position: { x, y } })
+      }
     }
     guidesRef.current = {}
     setGuides({})

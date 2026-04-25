@@ -43,6 +43,21 @@ export function toSQL(diagram: Diagram): string {
     const tbl  = tblName(entity)
     const fks: FKEntry[] = []
 
+    // Sub-entity: FK-as-PK referencing the super-entity
+    if (entity.parentEntityId) {
+      const superEntity = entityMap.get(entity.parentEntityId)
+      if (superEntity) {
+        const refCol = pkColName(superEntity)
+        fks.push({
+          colName:  refCol,
+          refTable: tblName(superEntity),
+          refCol,
+          notNull:  true,
+          uidBar:   true,  // FK is also the PK
+        })
+      }
+    }
+
     // ── Collect FK columns from relationships ──────────────────
     for (const rel of diagram.relationships) {
       const isSelf = rel.sourceEntityId === rel.targetEntityId
