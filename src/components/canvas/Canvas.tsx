@@ -153,8 +153,8 @@ export default function Canvas() {
     addRelationship({
       sourceEntityId: src,
       targetEntityId: tgt,
-      sourceEnd: { cardinality: 'one',                    optionality: isSelf ? 'optional' : 'mandatory', label: '', uidBar: false },
-      targetEnd: { cardinality: isSelf ? 'many' : 'one', optionality: isSelf ? 'optional' : 'mandatory', label: '', uidBar: false },
+      sourceEnd: { cardinality: 'one',  optionality: 'optional',                        label: '', uidBar: false },
+      targetEnd: { cardinality: 'many', optionality: isSelf ? 'optional' : 'mandatory', label: '', uidBar: false },
       ...(isSelf && {
         loopCorner: getLoopCornerFromHandles(
           connection.sourceHandle ?? '',

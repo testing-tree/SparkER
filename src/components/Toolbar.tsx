@@ -163,7 +163,28 @@ export default function Toolbar() {
                 })}
                 className={BTN}
               >
-                Self-reference
+                Recursive
+              </button>
+              <button
+                onClick={() => {
+                  const name = window.prompt('Intersection entity name:')
+                  if (!name?.trim()) return
+                  const base = selectedEntity?.position ?? { x: 200, y: 200 }
+                  const intersectionId = addEntity({
+                    name: name.trim().toUpperCase(),
+                    attributes: [],
+                    position: { x: base.x + 200, y: base.y - 150 },
+                  })
+                  const ends = {
+                    sourceEnd: { cardinality: 'one'  as const, optionality: 'optional'  as const, label: '', uidBar: false },
+                    targetEnd: { cardinality: 'many' as const, optionality: 'mandatory' as const, label: '', uidBar: false },
+                  }
+                  addRelationship({ sourceEntityId: selection.entityIds[0], targetEntityId: intersectionId, ...ends })
+                  addRelationship({ sourceEntityId: selection.entityIds[0], targetEntityId: intersectionId, ...ends })
+                }}
+                className={BTN}
+              >
+                Recursive m:m
               </button>
             </>
           )}

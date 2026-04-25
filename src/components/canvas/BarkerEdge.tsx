@@ -90,6 +90,39 @@ function labelPos(ex: number, ey: number, pos: Position, flipped = false): [numb
 // Same layout logic, reused for self-loop exits/entries
 const loopLabelPos = labelPos
 
+// Compute the midpoint of an SVG circular arc (large-arc=1 split into two halves).
+function arcMidpoint(
+  x1: number, y1: number,
+  x2: number, y2: number,
+  r: number,
+  largeArc: 0 | 1,
+  sweep: 0 | 1,
+): [number, number] {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2
+  const ddx = x2 - x1, ddy = y2 - y1
+  const d = Math.sqrt(ddx * ddx + ddy * ddy)
+  if (d < 1e-6) return [x1, y1]
+  const h = Math.sqrt(Math.max(0, r * r - (d / 2) * (d / 2)))
+  const sign = largeArc !== sweep ? 1 : -1
+  const cx = mx + sign * h * (-ddy) / d
+  const cy = my + sign * h * ddx / d
+  const θ1 = Math.atan2(y1 - cy, x1 - cx)
+  const θ2 = Math.atan2(y2 - cy, x2 - cx)
+  let θm: number
+  if (sweep === 0) {
+    let span = θ1 - θ2
+    if (span < 0) span += 2 * Math.PI
+    if (largeArc === 1 && span < Math.PI) span = 2 * Math.PI - span
+    θm = θ1 - span / 2
+  } else {
+    let span = θ2 - θ1
+    if (span < 0) span += 2 * Math.PI
+    if (largeArc === 1 && span < Math.PI) span = 2 * Math.PI - span
+    θm = θ1 + span / 2
+  }
+  return [cx + r * Math.cos(θm), cy + r * Math.sin(θm)]
+}
+
 function CrowsFoot({ ex, ey, pos, optional }: {
   ex: number; ey: number; pos: Position; optional: boolean
 }) {
@@ -190,7 +223,16 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
       ` A ${LOOP_RADIUS} ${LOOP_RADIUS} 0 1 ${g.sweep} ${arcToX} ${arcToY}` +
       (tgtMany ? ` L ${g.entryX} ${g.entryY}` : '')
 
-    const loopDash = srcOptional || tgtOptional ? { strokeDasharray: '2 3' } : {}
+    // Split at arc midpoint for independent half-optional styling (matches regular edge logic).
+    const [midX, midY] = arcMidpoint(arcFromX, arcFromY, arcToX, arcToY, LOOP_RADIUS, 1, g.sweep)
+    const srcLoopPath =
+      (srcMany ? `M ${g.exitX} ${g.exitY} L ${arcFromX} ${arcFromY}` : `M ${arcFromX} ${arcFromY}`) +
+      ` A ${LOOP_RADIUS} ${LOOP_RADIUS} 0 0 ${g.sweep} ${midX} ${midY}`
+    const tgtLoopPath =
+      `M ${midX} ${midY} A ${LOOP_RADIUS} ${LOOP_RADIUS} 0 0 ${g.sweep} ${arcToX} ${arcToY}` +
+      (tgtMany ? ` L ${g.entryX} ${g.entryY}` : '')
+    const srcDash = srcOptional ? { strokeDasharray: '2 3' } : {}
+    const tgtDash = tgtOptional ? { strokeDasharray: '2 3' } : {}
 
     const CORNERS: Corner[] = ['top-right', 'top-left', 'bottom-right', 'bottom-left']
     const DOT = 14  // diagonal offset for corner picker dots
@@ -206,8 +248,11 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
         {/* Hit area */}
         <path d={loopPath} stroke="transparent" strokeWidth={20} />
 
-        {/* Loop path */}
-        <path d={loopPath} stroke={stroke} strokeWidth={sw} {...loopDash} />
+        {/* Source half */}
+        <path d={srcLoopPath} stroke={stroke} strokeWidth={sw} {...srcDash} />
+
+        {/* Target half */}
+        <path d={tgtLoopPath} stroke={stroke} strokeWidth={sw} {...tgtDash} />
 
         {/* Crow's feet */}
         <g stroke={stroke} strokeWidth={sw}>

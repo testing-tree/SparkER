@@ -39,11 +39,12 @@ The project name comes from **International Klein Blue (#002FA7)**, also the ico
 - Optional ends render as dashed lines; the two halves of a relationship line are styled independently (half-dashed, half-solid)
 - Crow's foot symbol on the "many" end; UID bar tick mark for weak entity identification
 
-### Self-Reference Loops
-- Add a recursive relationship to any entity via the "Self-reference" button
-- The loop renders as a smooth circular arc at one of four corners of the entity
+### Recursive Loops
+- Add a recursive relationship to any entity via the **Recursive** button
+- The loop renders as a smooth circular arc at one of four corners of the entity; the exit half and entry half are styled independently (dashed / solid) based on their optionality
 - Click the corner indicator dots (visible when the loop is selected) to reposition the loop and avoid overlap with other lines
-- Drag to create a self-reference directly by connecting any handle back to the same entity; the corner is determined automatically from the handles used
+- Drag to create a recursive relationship directly by connecting any handle back to the same entity; the corner is determined automatically from the handles used
+- **Recursive m:m**: creates an intersection entity offset from the selected entity and connects it with two 1:m relationships, forming a V-shape for recursive many-to-many scenarios
 
 ### Many-to-Many Relationships
 - Direct many-to-many is not allowed in Barker notation; the Properties panel warns when both ends are set to "many"

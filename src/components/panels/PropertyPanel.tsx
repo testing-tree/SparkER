@@ -147,7 +147,7 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Self-reference</p>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recursive</p>
       {entity && <p className="text-sm font-bold text-gray-900">{entity.name}</p>}
 
       <Toggle
