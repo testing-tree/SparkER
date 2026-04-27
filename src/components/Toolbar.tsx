@@ -4,6 +4,7 @@ import { toPng, toSvg } from 'html-to-image'
 import { useDiagramStore } from '../store/diagramStore'
 import { toSQL } from '../lib/export/toSQL'
 import SQLExportModal from './SQLExportModal'
+import ExclusiveArcModal from './ExclusiveArcModal'
 
 const BTN  = 'w-fit min-w-[140px] px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
 const RBTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
@@ -18,12 +19,14 @@ export default function Toolbar() {
   const addAttribute       = useDiagramStore(s => s.addAttribute)
   const addRelationship    = useDiagramStore(s => s.addRelationship)
   const addSubEntity       = useDiagramStore(s => s.addSubEntity)
+  const addExclusiveArc    = useDiagramStore(s => s.addExclusiveArc)
   const setDiagramName     = useDiagramStore(s => s.setDiagramName)
   const saveToJSON         = useDiagramStore(s => s.saveToJSON)
   const loadFromJSON       = useDiagramStore(s => s.loadFromJSON)
 
   const [nameVal, setNameVal]     = useState(diagram.name)
   const [sqlText, setSqlText]     = useState<string | null>(null)
+  const [showArcModal, setShowArcModal] = useState(false)
   const [rightMinW, setRightMinW] = useState<number | undefined>(undefined)
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
@@ -124,10 +127,17 @@ export default function Toolbar() {
     setSqlText(toSQL(diagram))
   }, [diagram])
 
-  const oneEntity     = selection.entityIds.length === 1
+  const oneEntity      = selection.entityIds.length === 1
   const selectedEntity = oneEntity
     ? diagram.entities.find(e => e.id === selection.entityIds[0])
     : undefined
+
+  // Outgoing non-self relationships from the selected entity (eligible for exclusive arc)
+  const eligibleArcRels = oneEntity
+    ? diagram.relationships.filter(
+        r => r.sourceEntityId === selection.entityIds[0] && r.sourceEntityId !== r.targetEntityId
+      )
+    : []
 
   return (
     <>
@@ -197,6 +207,11 @@ export default function Toolbar() {
               >
                 Recursive m:m
               </button>
+              {eligibleArcRels.length >= 2 && (
+                <button onClick={() => setShowArcModal(true)} className={BTN}>
+                  Exclusive Arc
+                </button>
+              )}
             </>
           )}
         </div>
@@ -219,6 +234,18 @@ export default function Toolbar() {
           sql={sqlText}
           filename={`${diagram.name || 'diagram'}.sql`}
           onClose={() => setSqlText(null)}
+        />
+      )}
+
+      {showArcModal && oneEntity && (
+        <ExclusiveArcModal
+          relationships={eligibleArcRels}
+          entities={diagram.entities}
+          onConfirm={ids => {
+            addExclusiveArc({ sourceEntityId: selection.entityIds[0], relationshipIds: ids })
+            setShowArcModal(false)
+          }}
+          onClose={() => setShowArcModal(false)}
         />
       )}
     </>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useDiagramStore } from '../../store/diagramStore'
 import type { Relationship, RelationshipEnd } from '../../types/diagram'
 
+const DEL_BTN = 'px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100 cursor-pointer w-full text-left'
+
 function Toggle({
   label,
   options,
@@ -184,11 +186,14 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
 }
 
 export default function PropertyPanel() {
-  const selection  = useDiagramStore(s => s.selection)
-  const diagram    = useDiagramStore(s => s.diagram)
+  const selection        = useDiagramStore(s => s.selection)
+  const diagram          = useDiagramStore(s => s.diagram)
+  const deleteArc        = useDiagramStore(s => s.deleteExclusiveArc)
+  const setSelection     = useDiagramStore(s => s.setSelection)
 
   const selectedEntityId = selection.entityIds[0] ?? null
   const selectedRelId    = selection.relationshipIds[0] ?? null
+  const selectedArcId    = selection.arcIds?.[0] ?? null
 
   const entity = selectedEntityId
     ? diagram.entities.find(e => e.id === selectedEntityId) ?? null
@@ -196,8 +201,11 @@ export default function PropertyPanel() {
   const rel = selectedRelId
     ? diagram.relationships.find(r => r.id === selectedRelId) ?? null
     : null
+  const arc = selectedArcId
+    ? diagram.exclusiveArcs.find(a => a.id === selectedArcId) ?? null
+    : null
 
-  if (!entity && !rel) return null
+  if (!entity && !rel && !arc) return null
 
   return (
     <div className="shrink-0 h-full border-l border-gray-200 bg-white overflow-y-auto overflow-x-hidden p-4 space-y-4" style={{ minWidth: 280, width: 280 }}>
@@ -251,6 +259,38 @@ export default function PropertyPanel() {
               )
             })()
       )}
+
+      {arc && (() => {
+        const srcEntity = diagram.entities.find(e => e.id === arc.sourceEntityId)
+        const targets = arc.relationshipIds
+          .map(rid => diagram.relationships.find(r => r.id === rid))
+          .filter(Boolean)
+          .map(r => diagram.entities.find(e => e.id === r!.targetEntityId)?.name ?? '?')
+        return (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exclusive Arc</p>
+            {srcEntity && (
+              <p className="text-xs text-gray-500">
+                on <span className="font-semibold text-gray-700">{srcEntity.name}</span>
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {targets.map((name, i) => (
+                <p key={i} className="text-xs text-gray-700">• {name}</p>
+              ))}
+            </div>
+            <button
+              className={DEL_BTN}
+              onClick={() => {
+                deleteArc(arc.id)
+                setSelection({ arcIds: [] })
+              }}
+            >
+              Delete Arc
+            </button>
+          </div>
+        )
+      })()}
     </div>
   )
 }

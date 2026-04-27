@@ -7,6 +7,7 @@ import type {
   Attribute,
   Relationship,
   RelationshipEnd,
+  ExclusiveArc,
 } from '../types/diagram'
 
 function now(): string {
@@ -30,7 +31,7 @@ function emptyDiagram(): Diagram {
 
 export interface DiagramStore {
   diagram: Diagram
-  selection: { entityIds: string[]; relationshipIds: string[] }
+  selection: { entityIds: string[]; relationshipIds: string[]; arcIds: string[] }
   viewport: { x: number; y: number; zoom: number }
 
   // Entity actions
@@ -50,6 +51,10 @@ export interface DiagramStore {
   updateRelationship(id: string, patch: Partial<Relationship>): void
   updateRelationshipEnd(id: string, end: 'source' | 'target', patch: Partial<RelationshipEnd>): void
   deleteRelationship(id: string): void
+
+  // Exclusive arc actions
+  addExclusiveArc(arc: Omit<ExclusiveArc, 'id'>): string
+  deleteExclusiveArc(id: string): void
 
   // Atomic m:m creation
   createManyToMany(sourceId: string, targetId: string, intersectionName: string): void
@@ -77,7 +82,7 @@ export const useDiagramStore = create<DiagramStore>()(
   temporal<DiagramStore>(
     (set, get) => ({
       diagram: emptyDiagram(),
-      selection: { entityIds: [], relationshipIds: [] },
+      selection: { entityIds: [], relationshipIds: [], arcIds: [] },
       viewport: { x: 0, y: 0, zoom: 1 },
 
       // ── Entity ──────────────────────────────────────────────────
@@ -310,10 +315,34 @@ export const useDiagramStore = create<DiagramStore>()(
           diagram: {
             ...s.diagram,
             relationships: s.diagram.relationships.filter(r => r.id !== id),
-            exclusiveArcs: s.diagram.exclusiveArcs.map(a => ({
-              ...a,
-              relationshipIds: a.relationshipIds.filter(rid => rid !== id),
-            })),
+            exclusiveArcs: s.diagram.exclusiveArcs
+              .map(a => ({ ...a, relationshipIds: a.relationshipIds.filter(rid => rid !== id) }))
+              .filter(a => a.relationshipIds.length >= 2),
+            updatedAt: now(),
+          },
+        }))
+      },
+
+      // ── Exclusive arc ────────────────────────────────────────────
+
+      addExclusiveArc(arc) {
+        const id = crypto.randomUUID()
+        const newArc: ExclusiveArc = { ...arc, id }
+        set(s => ({
+          diagram: {
+            ...s.diagram,
+            exclusiveArcs: [...s.diagram.exclusiveArcs, newArc],
+            updatedAt: now(),
+          },
+        }))
+        return id
+      },
+
+      deleteExclusiveArc(id) {
+        set(s => ({
+          diagram: {
+            ...s.diagram,
+            exclusiveArcs: s.diagram.exclusiveArcs.filter(a => a.id !== id),
             updatedAt: now(),
           },
         }))
@@ -386,11 +415,11 @@ export const useDiagramStore = create<DiagramStore>()(
 
       loadFromJSON(json) {
         const diagram = JSON.parse(json) as Diagram
-        set({ diagram, selection: { entityIds: [], relationshipIds: [] } })
+        set({ diagram, selection: { entityIds: [], relationshipIds: [], arcIds: [] } })
       },
 
       reset() {
-        set({ diagram: emptyDiagram(), selection: { entityIds: [], relationshipIds: [] } })
+        set({ diagram: emptyDiagram(), selection: { entityIds: [], relationshipIds: [], arcIds: [] } })
       },
     }),
     {

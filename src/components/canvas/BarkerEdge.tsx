@@ -1,9 +1,9 @@
 import { useReactFlow, useEdges, useInternalNode, Position, type EdgeProps, type Node } from '@xyflow/react'
 import { useDiagramStore } from '../../store/diagramStore'
+import { getBestSides, getHandleXYDistributed, armEnd, getDistributedFraction } from './edgeGeometry'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ARM_LENGTH  = 30
 const FORK_DIST   = 12
 const HALF_SPREAD = 5
 const UID_DIST    = 15
@@ -15,52 +15,6 @@ const LOOP_RADIUS = 28   // arc radius
 const LOOP_OFFSET = 20   // exit/entry distance from top-right corner
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getBestSides(srcNode: Node, tgtNode: Node): { srcPos: Position; tgtPos: Position } {
-  const sw = srcNode.measured?.width  ?? 150
-  const sh = srcNode.measured?.height ?? 100
-  const tw = tgtNode.measured?.width  ?? 150
-  const th = tgtNode.measured?.height ?? 100
-
-  const srcCx = srcNode.position.x + sw / 2
-  const srcCy = srcNode.position.y + sh / 2
-  const tgtCx = tgtNode.position.x + tw / 2
-  const tgtCy = tgtNode.position.y + th / 2
-
-  const dx = tgtCx - srcCx
-  const dy = tgtCy - srcCy
-
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx >= 0
-      ? { srcPos: Position.Right,  tgtPos: Position.Left }
-      : { srcPos: Position.Left,   tgtPos: Position.Right }
-  } else {
-    return dy >= 0
-      ? { srcPos: Position.Bottom, tgtPos: Position.Top }
-      : { srcPos: Position.Top,    tgtPos: Position.Bottom }
-  }
-}
-
-
-function getHandleXYDistributed(node: Node, pos: Position, fraction: number): [number, number] {
-  const x = node.position.x
-  const y = node.position.y
-  const w = node.measured?.width  ?? 150
-  const h = node.measured?.height ?? 100
-  switch (pos) {
-    case Position.Top:    return [x + w * fraction, y]
-    case Position.Bottom: return [x + w * fraction, y + h]
-    case Position.Left:   return [x,                y + h * fraction]
-    case Position.Right:  return [x + w,            y + h * fraction]
-  }
-}
-
-function armEnd(x: number, y: number, pos: Position): [number, number] {
-  if (pos === Position.Top)    return [x, y - ARM_LENGTH]
-  if (pos === Position.Bottom) return [x, y + ARM_LENGTH]
-  if (pos === Position.Left)   return [x - ARM_LENGTH, y]
-  return                              [x + ARM_LENGTH, y]
-}
 
 function posToInward(pos: Position): [number, number] {
   if (pos === Position.Left)   return [ 1,  0]
@@ -322,45 +276,9 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
 
   const { srcPos, tgtPos } = getBestSides(sourceNode, targetNode)
 
-  function getDistributedFraction(
-    entityId: string,
-    side: Position,
-    thisEdgeId: string,
-    isSourceEnd: boolean,
-  ): number {
-    const coEdges = allEdges.filter(e => {
-      if (e.source === e.target) return false
-      const endEntityId = isSourceEnd ? e.source : e.target
-      if (endEntityId !== entityId) return false
-      const eSrc = getNode(e.source)
-      const eTgt = getNode(e.target)
-      if (!eSrc || !eTgt) return false
-      const { srcPos, tgtPos } = getBestSides(eSrc, eTgt)
-      const eSide = isSourceEnd ? srcPos : tgtPos
-      return eSide === side
-    })
-    if (coEdges.length <= 1) return 0.5
-    coEdges.sort((a, b) => {
-      const aOther = getNode(isSourceEnd ? a.target : a.source)
-      const bOther = getNode(isSourceEnd ? b.target : b.source)
-      if (!aOther || !bOther) return 0
-      const aW = aOther.measured?.width  ?? 150
-      const aH = aOther.measured?.height ?? 100
-      const bW = bOther.measured?.width  ?? 150
-      const bH = bOther.measured?.height ?? 100
-      if (side === Position.Top || side === Position.Bottom) {
-        return (aOther.position.x + aW / 2) - (bOther.position.x + bW / 2)
-      } else {
-        return (aOther.position.y + aH / 2) - (bOther.position.y + bH / 2)
-      }
-    })
-    const idx = coEdges.findIndex(e => e.id === thisEdgeId)
-    if (idx === -1) return 0.5
-    return (idx + 1) / (coEdges.length + 1)
-  }
-
-  const [sx, sy] = getHandleXYDistributed(sourceNode, srcPos, getDistributedFraction(source, srcPos, id, true))
-  const [tx, ty] = getHandleXYDistributed(targetNode, tgtPos, getDistributedFraction(target, tgtPos, id, false))
+  const gn = getNode as (id: string) => Node | undefined
+  const [sx, sy] = getHandleXYDistributed(sourceNode, srcPos, getDistributedFraction(source, srcPos, id, true,  allEdges, gn))
+  const [tx, ty] = getHandleXYDistributed(targetNode, tgtPos, getDistributedFraction(target, tgtPos, id, false, allEdges, gn))
 
   const [saX, saY] = armEnd(sx, sy, srcPos)
   const [taX, taY] = armEnd(tx, ty, tgtPos)

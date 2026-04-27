@@ -23,6 +23,7 @@ import BarkerEdge from './BarkerEdge'
 import Toolbar from '../Toolbar'
 import UndoRedo from '../UndoRedo'
 import SnapGuides from './SnapGuides'
+import ArcOverlay from './ArcOverlay'
 import type { Entity, Relationship } from '../../types/diagram'
 
 const nodeTypes = { entityNode: EntityNode }
@@ -68,12 +69,14 @@ function relationshipToEdge(rel: Relationship): Edge {
 }
 
 export default function Canvas() {
-  const diagram            = useDiagramStore(s => s.diagram)
-  const updateEntity       = useDiagramStore(s => s.updateEntity)
-  const addRelationship    = useDiagramStore(s => s.addRelationship)
-  const deleteEntityAction = useDiagramStore(s => s.deleteEntity)
-  const deleteRelAction    = useDiagramStore(s => s.deleteRelationship)
-  const setSelection       = useDiagramStore(s => s.setSelection)
+  const diagram              = useDiagramStore(s => s.diagram)
+  const selection            = useDiagramStore(s => s.selection)
+  const updateEntity         = useDiagramStore(s => s.updateEntity)
+  const addRelationship      = useDiagramStore(s => s.addRelationship)
+  const deleteEntityAction   = useDiagramStore(s => s.deleteEntity)
+  const deleteRelAction      = useDiagramStore(s => s.deleteRelationship)
+  const deleteArcAction      = useDiagramStore(s => s.deleteExclusiveArc)
+  const setSelection         = useDiagramStore(s => s.setSelection)
 
   const [nodes, setNodes, onNodesChange] = useNodesState(
     diagram.entities.map(entityToNode)
@@ -222,6 +225,7 @@ export default function Canvas() {
     setSelection({
       entityIds:       nodes.map(n => n.id),
       relationshipIds: edges.map(e => e.id),
+      arcIds:          [],   // clicking an RF element clears any arc selection
     })
   }, [setSelection])
 
@@ -235,20 +239,25 @@ export default function Canvas() {
         e.preventDefault()
         setNodes(prev => prev.map(n => ({ ...n, selected: false })))
         setEdges(prev => prev.map(ed => ({ ...ed, selected: false })))
-        setSelection({ entityIds: [], relationshipIds: [] })
+        setSelection({ entityIds: [], relationshipIds: [], arcIds: [] })
       } else if (mod && e.key === 'a') {
         e.preventDefault()
         setNodes(prev => {
-          setSelection({ entityIds: prev.map(n => n.id), relationshipIds: [] })
+          setSelection({ entityIds: prev.map(n => n.id), relationshipIds: [], arcIds: [] })
           return prev.map(n => ({ ...n, selected: true }))
         })
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selection.arcIds?.length) {
+        // Arc selected: delete it (RF deleteKeyCode handles nodes/edges separately)
+        e.preventDefault()
+        selection.arcIds.forEach(id => deleteArcAction(id))
+        setSelection({ arcIds: [] })
       }
-      // Delete/Backspace: handled by ReactFlow deleteKeyCode prop + onNodesDelete/onEdgesDelete
+      // Delete/Backspace for RF nodes/edges: handled by ReactFlow deleteKeyCode prop
       // Ctrl+Z / Ctrl+Shift+Z: handled by UndoRedo.tsx
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [setNodes, setEdges, setSelection])
+  }, [setNodes, setEdges, setSelection, selection.arcIds, deleteArcAction])
 
   return (
     <ReactFlow
@@ -274,6 +283,7 @@ export default function Canvas() {
       <Toolbar />
       <UndoRedo />
       <SnapGuides guides={guides} />
+      <ArcOverlay />
     </ReactFlow>
   )
 }
