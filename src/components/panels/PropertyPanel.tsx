@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useDiagramStore } from '../../store/diagramStore'
 import type { Relationship, RelationshipEnd } from '../../types/diagram'
+import ExclusiveArcModal from '../ExclusiveArcModal'
+
+// ── Button styles ─────────────────────────────────────────────────────────────
 
 const DEL_BTN = 'px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100 cursor-pointer w-full text-left'
+const ACT_BTN = 'w-full px-2 py-1.5 text-xs font-medium text-left bg-white border border-gray-200 rounded hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-gray-700'
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function Toggle({
   label,
@@ -54,13 +60,9 @@ function EndSection({
   const updateRelationshipEnd = useDiagramStore(s => s.updateRelationshipEnd)
   const [labelVal, setLabelVal] = useState(end.label)
 
-  useEffect(() => {
-    setLabelVal(end.label)
-  }, [end.label])
+  useEffect(() => { setLabelVal(end.label) }, [end.label])
 
-  const commitLabel = () => {
-    updateRelationshipEnd(relId, endKey, { label: labelVal })
-  }
+  const commitLabel = () => updateRelationshipEnd(relId, endKey, { label: labelVal })
 
   return (
     <div className="space-y-2">
@@ -86,9 +88,7 @@ function EndSection({
           value={labelVal}
           onChange={e => setLabelVal(e.target.value)}
           onBlur={commitLabel}
-          onKeyDown={e => {
-            if (e.key === 'Enter') { e.preventDefault(); commitLabel() }
-          }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitLabel() } }}
           className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-2 py-0.5 outline-none focus:border-gray-500"
           placeholder="(none)"
         />
@@ -151,7 +151,6 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
     <div className="space-y-2">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recursive</p>
       {entity && <p className="text-sm font-bold text-gray-900">{entity.name}</p>}
-
       <Toggle
         label="Cardinality"
         options={['one', 'many']}
@@ -185,11 +184,19 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
   )
 }
 
+// ── Main panel ────────────────────────────────────────────────────────────────
+
 export default function PropertyPanel() {
   const selection        = useDiagramStore(s => s.selection)
   const diagram          = useDiagramStore(s => s.diagram)
   const deleteArc        = useDiagramStore(s => s.deleteExclusiveArc)
   const setSelection     = useDiagramStore(s => s.setSelection)
+  const addRelationship  = useDiagramStore(s => s.addRelationship)
+  const addEntity        = useDiagramStore(s => s.addEntity)
+  const addSubEntity     = useDiagramStore(s => s.addSubEntity)
+  const addExclusiveArc  = useDiagramStore(s => s.addExclusiveArc)
+
+  const [showArcModal, setShowArcModal] = useState(false)
 
   const selectedEntityId = selection.entityIds[0] ?? null
   const selectedRelId    = selection.relationshipIds[0] ?? null
@@ -205,39 +212,109 @@ export default function PropertyPanel() {
     ? diagram.exclusiveArcs.find(a => a.id === selectedArcId) ?? null
     : null
 
+  // Outgoing non-self relationships eligible for exclusive arc
+  const eligibleArcRels = entity
+    ? diagram.relationships.filter(
+        r => r.sourceEntityId === entity.id && r.sourceEntityId !== r.targetEntityId
+      )
+    : []
+
   if (!entity && !rel && !arc) return null
 
   return (
-    <div className="shrink-0 h-full border-l border-gray-200 bg-white overflow-y-auto overflow-x-hidden p-4 space-y-4" style={{ minWidth: 280, width: 280 }}>
+    <div
+      className="shrink-0 h-full border-l border-gray-200 bg-white overflow-y-auto overflow-x-hidden p-4 space-y-4"
+      style={{ minWidth: 280, width: 280 }}
+    >
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Properties</p>
 
+      {/* ── Entity section ── */}
       {entity && (() => {
         const superEntity = entity.parentEntityId
           ? diagram.entities.find(e => e.id === entity.parentEntityId)
           : null
         const subEntities = diagram.entities.filter(e => e.parentEntityId === entity.id)
+
         return (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {superEntity ? 'Sub-entity' : subEntities.length > 0 ? 'Super-entity' : 'Entity'}
-            </p>
-            <p className="text-sm font-bold text-gray-900">{entity.name}</p>
-            {superEntity && (
-              <p className="text-xs text-gray-500">
-                of <span className="font-semibold text-gray-700">{superEntity.name}</span>
+          <div className="space-y-3">
+            {/* Identity */}
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {superEntity ? 'Sub-entity' : subEntities.length > 0 ? 'Super-entity' : 'Entity'}
               </p>
-            )}
-            {subEntities.length > 0 && (
-              <p className="text-xs text-gray-500">
-                {subEntities.length} sub-entit{subEntities.length === 1 ? 'y' : 'ies'}:{' '}
-                {subEntities.map(s => s.name).join(', ')}
-              </p>
-            )}
-            <p className="text-xs text-gray-400 italic">Double-click on canvas to rename.</p>
+              <p className="text-sm font-bold text-gray-900">{entity.name}</p>
+              {superEntity && (
+                <p className="text-xs text-gray-500">
+                  of <span className="font-semibold text-gray-700">{superEntity.name}</span>
+                </p>
+              )}
+              {subEntities.length > 0 && (
+                <p className="text-xs text-gray-500">
+                  {subEntities.length} sub-entit{subEntities.length === 1 ? 'y' : 'ies'}:{' '}
+                  {subEntities.map(s => s.name).join(', ')}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 italic">Double-click on canvas to rename.</p>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Actions */}
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</p>
+              <button
+                className={ACT_BTN}
+                onClick={() => addRelationship({
+                  sourceEntityId: entity.id,
+                  targetEntityId: entity.id,
+                  sourceEnd: { cardinality: 'one',  optionality: 'optional', label: '', uidBar: false },
+                  targetEnd: { cardinality: 'many', optionality: 'optional', label: '', uidBar: false },
+                })}
+              >
+                Recursive
+              </button>
+              <button
+                className={ACT_BTN}
+                onClick={() => {
+                  const name = window.prompt('Intersection entity name:')
+                  if (!name?.trim()) return
+                  const base = entity.position
+                  const intersectionId = addEntity({
+                    name: name.trim().toUpperCase(),
+                    attributes: [],
+                    position: { x: base.x + 200, y: base.y - 150 },
+                  })
+                  const ends = {
+                    sourceEnd: { cardinality: 'one'  as const, optionality: 'optional'  as const, label: '', uidBar: false },
+                    targetEnd: { cardinality: 'many' as const, optionality: 'mandatory' as const, label: '', uidBar: false },
+                  }
+                  addRelationship({ sourceEntityId: entity.id, targetEntityId: intersectionId, ...ends })
+                  addRelationship({ sourceEntityId: entity.id, targetEntityId: intersectionId, ...ends })
+                }}
+              >
+                Recursive m:m
+              </button>
+              <button
+                className={ACT_BTN}
+                onClick={() => {
+                  const name = window.prompt('Sub-entity name:')
+                  if (!name?.trim()) return
+                  addSubEntity(entity.id, { name: name.trim().toUpperCase(), attributes: [] })
+                }}
+              >
+                Add Sub-entity
+              </button>
+              {eligibleArcRels.length >= 2 && (
+                <button className={ACT_BTN} onClick={() => setShowArcModal(true)}>
+                  Exclusive Arc
+                </button>
+              )}
+            </div>
           </div>
         )
       })()}
 
+      {/* ── Relationship section ── */}
       {rel && (
         rel.sourceEntityId === rel.targetEntityId
           ? <SelfRefSection rel={rel} />
@@ -260,6 +337,7 @@ export default function PropertyPanel() {
             })()
       )}
 
+      {/* ── Exclusive arc section ── */}
       {arc && (() => {
         const srcEntity = diagram.entities.find(e => e.id === arc.sourceEntityId)
         const targets = arc.relationshipIds
@@ -291,6 +369,19 @@ export default function PropertyPanel() {
           </div>
         )
       })()}
+
+      {/* ── Exclusive arc modal ── */}
+      {showArcModal && entity && (
+        <ExclusiveArcModal
+          relationships={eligibleArcRels}
+          entities={diagram.entities}
+          onConfirm={ids => {
+            addExclusiveArc({ sourceEntityId: entity.id, relationshipIds: ids })
+            setShowArcModal(false)
+          }}
+          onClose={() => setShowArcModal(false)}
+        />
+      )}
     </div>
   )
 }

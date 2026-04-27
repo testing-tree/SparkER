@@ -4,7 +4,6 @@ import { toPng, toSvg } from 'html-to-image'
 import { useDiagramStore } from '../store/diagramStore'
 import { toSQL } from '../lib/export/toSQL'
 import SQLExportModal from './SQLExportModal'
-import ExclusiveArcModal from './ExclusiveArcModal'
 
 const BTN  = 'w-fit min-w-[140px] px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
 const RBTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
@@ -12,21 +11,17 @@ const RBTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-
 const PADDING = 40
 
 export default function Toolbar() {
-  const { getNodes }       = useReactFlow()
-  const diagram            = useDiagramStore(s => s.diagram)
-  const selection          = useDiagramStore(s => s.selection)
-  const addEntity          = useDiagramStore(s => s.addEntity)
-  const addAttribute       = useDiagramStore(s => s.addAttribute)
-  const addRelationship    = useDiagramStore(s => s.addRelationship)
-  const addSubEntity       = useDiagramStore(s => s.addSubEntity)
-  const addExclusiveArc    = useDiagramStore(s => s.addExclusiveArc)
-  const setDiagramName     = useDiagramStore(s => s.setDiagramName)
-  const saveToJSON         = useDiagramStore(s => s.saveToJSON)
-  const loadFromJSON       = useDiagramStore(s => s.loadFromJSON)
+  const { getNodes }   = useReactFlow()
+  const diagram        = useDiagramStore(s => s.diagram)
+  const selection      = useDiagramStore(s => s.selection)
+  const addEntity      = useDiagramStore(s => s.addEntity)
+  const addAttribute   = useDiagramStore(s => s.addAttribute)
+  const setDiagramName = useDiagramStore(s => s.setDiagramName)
+  const saveToJSON     = useDiagramStore(s => s.saveToJSON)
+  const loadFromJSON   = useDiagramStore(s => s.loadFromJSON)
 
   const [nameVal, setNameVal]     = useState(diagram.name)
   const [sqlText, setSqlText]     = useState<string | null>(null)
-  const [showArcModal, setShowArcModal] = useState(false)
   const [rightMinW, setRightMinW] = useState<number | undefined>(undefined)
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
@@ -132,16 +127,9 @@ export default function Toolbar() {
     ? diagram.entities.find(e => e.id === selection.entityIds[0])
     : undefined
 
-  // Outgoing non-self relationships from the selected entity (eligible for exclusive arc)
-  const eligibleArcRels = oneEntity
-    ? diagram.relationships.filter(
-        r => r.sourceEntityId === selection.entityIds[0] && r.sourceEntityId !== r.targetEntityId
-      )
-    : []
-
   return (
     <>
-      {/* ── Left panel: canvas actions ── */}
+      {/* ── Left panel: canvas-level actions only ── */}
       <Panel position="top-left">
         <div className="flex flex-col gap-1" style={{ width: 176 }}>
           <input
@@ -151,68 +139,19 @@ export default function Toolbar() {
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitName() } }}
             placeholder="Untitled Diagram"
             className="px-3 py-1.5 text-sm font-medium border border-gray-300 rounded bg-white outline-none focus:border-gray-500 w-full"
-          style={{ color: '#002FA7' }}
+            style={{ color: '#002FA7' }}
           />
           <button onClick={handleAddEntity} className={BTN}>Add Entity</button>
           {oneEntity && (
-            <>
-              <button
-                onClick={() => {
-                  const kind = (selectedEntity?.attributes.length ?? 0) === 0 ? 'identifier' : 'required'
-                  addAttribute(selection.entityIds[0], { name: 'attribute', kind })
-                }}
-                className={BTN}
-              >
-                Add Attribute
-              </button>
-              <button
-                onClick={() => addRelationship({
-                  sourceEntityId: selection.entityIds[0],
-                  targetEntityId: selection.entityIds[0],
-                  sourceEnd: { cardinality: 'one',  optionality: 'optional', label: '', uidBar: false },
-                  targetEnd: { cardinality: 'many', optionality: 'optional', label: '', uidBar: false },
-                })}
-                className={BTN}
-              >
-                Recursive
-              </button>
-              <button
-                onClick={() => {
-                  const name = window.prompt('Sub-entity name:')
-                  if (!name?.trim()) return
-                  addSubEntity(selection.entityIds[0], { name: name.trim().toUpperCase(), attributes: [] })
-                }}
-                className={BTN}
-              >
-                Add Sub-entity
-              </button>
-              <button
-                onClick={() => {
-                  const name = window.prompt('Intersection entity name:')
-                  if (!name?.trim()) return
-                  const base = selectedEntity?.position ?? { x: 200, y: 200 }
-                  const intersectionId = addEntity({
-                    name: name.trim().toUpperCase(),
-                    attributes: [],
-                    position: { x: base.x + 200, y: base.y - 150 },
-                  })
-                  const ends = {
-                    sourceEnd: { cardinality: 'one'  as const, optionality: 'optional'  as const, label: '', uidBar: false },
-                    targetEnd: { cardinality: 'many' as const, optionality: 'mandatory' as const, label: '', uidBar: false },
-                  }
-                  addRelationship({ sourceEntityId: selection.entityIds[0], targetEntityId: intersectionId, ...ends })
-                  addRelationship({ sourceEntityId: selection.entityIds[0], targetEntityId: intersectionId, ...ends })
-                }}
-                className={BTN}
-              >
-                Recursive m:m
-              </button>
-              {eligibleArcRels.length >= 2 && (
-                <button onClick={() => setShowArcModal(true)} className={BTN}>
-                  Exclusive Arc
-                </button>
-              )}
-            </>
+            <button
+              onClick={() => {
+                const kind = (selectedEntity?.attributes.length ?? 0) === 0 ? 'identifier' : 'required'
+                addAttribute(selection.entityIds[0], { name: 'attribute', kind })
+              }}
+              className={BTN}
+            >
+              Add Attribute
+            </button>
           )}
         </div>
       </Panel>
@@ -220,12 +159,12 @@ export default function Toolbar() {
       {/* ── Right panel: save / load / export ── */}
       <Panel position="top-right">
         <div ref={rightPanelRef} className="flex flex-col gap-1" style={{ width: 'max-content', minWidth: rightMinW }}>
-          <button onClick={handleSave}            className={RBTN} style={{ minWidth: rightMinW }}>Save JSON</button>
-          <button onClick={handleLoad}            className={RBTN} style={{ minWidth: rightMinW }}>Load JSON</button>
+          <button onClick={handleSave}               className={RBTN} style={{ minWidth: rightMinW }}>Save JSON</button>
+          <button onClick={handleLoad}               className={RBTN} style={{ minWidth: rightMinW }}>Load JSON</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={onFileChange} />
           <button onClick={() => exportImage('png')} className={RBTN} style={{ minWidth: rightMinW }}>Export PNG</button>
           <button onClick={() => exportImage('svg')} className={RBTN} style={{ minWidth: rightMinW }}>Export SVG</button>
-          <button onClick={handleExportSQL}       className={RBTN} style={{ minWidth: rightMinW }}>Export SQL</button>
+          <button onClick={handleExportSQL}          className={RBTN} style={{ minWidth: rightMinW }}>Export SQL</button>
         </div>
       </Panel>
 
@@ -234,18 +173,6 @@ export default function Toolbar() {
           sql={sqlText}
           filename={`${diagram.name || 'diagram'}.sql`}
           onClose={() => setSqlText(null)}
-        />
-      )}
-
-      {showArcModal && oneEntity && (
-        <ExclusiveArcModal
-          relationships={eligibleArcRels}
-          entities={diagram.entities}
-          onConfirm={ids => {
-            addExclusiveArc({ sourceEntityId: selection.entityIds[0], relationshipIds: ids })
-            setShowArcModal(false)
-          }}
-          onClose={() => setShowArcModal(false)}
         />
       )}
     </>
