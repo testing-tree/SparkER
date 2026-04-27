@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDiagramStore } from '../../store/diagramStore'
 import type { Relationship, RelationshipEnd } from '../../types/diagram'
 import ExclusiveArcModal from '../ExclusiveArcModal'
+import PrivacyModal from '../PrivacyModal'
 
 // ── Button styles ─────────────────────────────────────────────────────────────
 
@@ -196,7 +197,8 @@ export default function PropertyPanel() {
   const addSubEntity     = useDiagramStore(s => s.addSubEntity)
   const addExclusiveArc  = useDiagramStore(s => s.addExclusiveArc)
 
-  const [showArcModal, setShowArcModal] = useState(false)
+  const [showArcModal, setShowArcModal]       = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
 
   const selectedEntityId = selection.entityIds[0] ?? null
   const selectedRelId    = selection.relationshipIds[0] ?? null
@@ -219,14 +221,16 @@ export default function PropertyPanel() {
       )
     : []
 
-  if (!entity && !rel && !arc) return null
-
   return (
     <div
-      className="shrink-0 h-full border-l border-gray-200 bg-white overflow-y-auto overflow-x-hidden p-4 space-y-4"
+      className="shrink-0 h-full border-l border-gray-200 bg-white flex flex-col overflow-x-hidden"
       style={{ minWidth: 280, width: 280 }}
     >
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Properties</p>
+      {/* ── Scrollable content ── */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {(entity || rel || arc) && (
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Properties</p>
+      )}
 
       {/* ── Entity section ── */}
       {entity && (() => {
@@ -370,6 +374,18 @@ export default function PropertyPanel() {
         )
       })()}
 
+      </div>{/* end scrollable content */}
+
+      {/* ── Privacy button ── */}
+      <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+        <button
+          onClick={() => setShowPrivacyModal(true)}
+          className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer"
+        >
+          🔒 Privacy
+        </button>
+      </div>
+
       {/* ── Exclusive arc modal ── */}
       {showArcModal && entity && (
         <ExclusiveArcModal
@@ -381,6 +397,11 @@ export default function PropertyPanel() {
           }}
           onClose={() => setShowArcModal(false)}
         />
+      )}
+
+      {/* ── Privacy modal ── */}
+      {showPrivacyModal && (
+        <PrivacyModal onClose={() => setShowPrivacyModal(false)} />
       )}
     </div>
   )

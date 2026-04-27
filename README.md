@@ -1,6 +1,8 @@
-# CD_002fa7
+# SparkER
 
-**A Barker notation ER diagram editor.**
+**A strict Barker notation ER diagram editor — built for clarity, built for the web.**
+
+*Development codename: CD_002fa7 (#002FA7)*
 
 [**Live Editor**](https://testing-tree.github.io/CD_002fa7/)
 
@@ -16,9 +18,24 @@ The challenge is that mainstream ERD tools, such as Lucidchart, draw.io, dbdiagr
 
 This project bridges that gap. It is a custom-built, web-based visual editor designed from the ground up to generate diagrams that are fully compliant with Barker’s Notation standards.
 
-The project name comes from **International Klein Blue (#002FA7)**, also the iconic cover color of David Tao’s self-titled debut album (1997). As this represents my first independent venture into full-scale development, the choice of color serves both as a personal milestone and a tribute to the artistry of David Tao.
+The tool is officially named **SparkER** — a nod to Entity-Relationship modelling, and to the idea that a single course can spark something that outlasts the semester. The name was suggested by Professor Derrick Neufeld of Ivey Business School.
 
-> 项目名称源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，使用此颜色谨作纪念和表示对陶喆音乐创作的喜爱。
+During development, the project carried the codename **CD_002fa7**, derived from International Klein Blue (#002FA7) — the colour of the cover of David Tao’s (陶喆) self-titled debut album *David Tao* (1997). This was also the first independent project I completed from start to finish. The colour remains the signature accent of the interface.
+
+> 项目开发代号 CD_002fa7 源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，以此颜色作为代号以表示我对此的一点纪念和对陶喆音乐创作的喜爱和敬意。
+
+---
+
+## Privacy & Data Security
+
+SparkER runs entirely in your browser. No data ever leaves your device.
+
+- No backend server, no database, no cloud storage
+- Diagrams are saved only to local files you explicitly export
+- No analytics, cookies, tracking, or third-party services
+- No outbound network calls of any kind
+
+A Content Security Policy (`connect-src 'none'`) is enforced at the browser level to make this a technical guarantee, not just a promise. Click the 🔒 Privacy button in the app for full details and instructions on how to verify this yourself.
 
 ---
 
