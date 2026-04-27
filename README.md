@@ -1,8 +1,8 @@
 # SparkER
 
-**A strict Barker notation ER diagram editor — built for clarity, built for the web.**
+**A Barker notation ER diagram editor.**
 
-[**Live Editor**](https://testing-tree.github.io/CD_002fa7/)
+[**Editor Link**](https://testing-tree.github.io/CD_002fa7/)
 
 ![Screenshot placeholder](./docs:/screenshot.png)
 
