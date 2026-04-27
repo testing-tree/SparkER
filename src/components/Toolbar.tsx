@@ -22,8 +22,10 @@ export default function Toolbar() {
 
   const [nameVal, setNameVal]     = useState(diagram.name)
   const [sqlText, setSqlText]     = useState<string | null>(null)
+  const [inputPx, setInputPx]     = useState(0)
   const [rightMinW, setRightMinW] = useState<number | undefined>(undefined)
   const fileInputRef  = useRef<HTMLInputElement>(null)
+  const nameSpanRef   = useRef<HTMLSpanElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -35,6 +37,11 @@ export default function Toolbar() {
   }, [])
 
   useEffect(() => { setNameVal(diagram.name) }, [diagram.name])
+
+  // Pixel-accurate input width: measure a hidden twin span after every value change
+  useEffect(() => {
+    if (nameSpanRef.current) setInputPx(nameSpanRef.current.offsetWidth + 2) // +2 for borders
+  }, [nameVal])
 
   const commitName = () => setDiagramName(nameVal.trim() || 'Untitled Diagram')
 
@@ -132,15 +139,22 @@ export default function Toolbar() {
       {/* ── Left panel: canvas-level actions only ── */}
       <Panel position="top-left">
         <div className="flex flex-col gap-1 w-fit">
+          {/* Hidden span used to measure exact pixel width of the input text */}
+          <span
+            ref={nameSpanRef}
+            aria-hidden
+            className="text-sm font-medium absolute invisible whitespace-pre pointer-events-none px-3"
+          >
+            {nameVal || 'Untitled Diagram'}
+          </span>
           <input
             value={nameVal}
             onChange={e => setNameVal(e.target.value)}
             onBlur={commitName}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitName() } }}
             placeholder="Untitled Diagram"
-            size={Math.max(nameVal.length, 10)}
             className="px-3 py-1.5 text-sm font-medium border border-gray-300 rounded bg-white outline-none focus:border-gray-500"
-            style={{ color: '#002FA7' }}
+            style={{ color: '#002FA7', width: inputPx > 0 ? inputPx : undefined }}
           />
           <button onClick={handleAddEntity} className={BTN}>Add Entity</button>
           {oneEntity && (
