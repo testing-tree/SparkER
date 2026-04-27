@@ -16,9 +16,9 @@ The challenge is that mainstream ERD tools, such as Lucidchart, draw.io, dbdiagr
 
 This project bridges that gap. It is a custom-built, web-based visual editor designed from the ground up to generate diagrams that are fully compliant with Barker’s Notation standards.
 
-The tool is officially named **SparkER** — a nod to Entity-Relationship modelling, and to the idea that a single course can spark something that outlasts the semester. The name was suggested by Professor Derrick Neufeld of Ivey Business School.
+The tool is officially named **SparkER**, a nod to Entity-Relationship modelling, and to the idea that a single course can spark something that outlasts the semester. The name was suggested by Professor Derrick Neufeld of Ivey Business School.
 
-During development, the project carried the codename **CD_002fa7**, derived from International Klein Blue (#002FA7) — the colour of the cover of David Tao’s (陶喆) self-titled debut album *David Tao* (1997). This was also the first independent project I completed from start to finish. The colour remains the signature accent of the interface.
+During development, the project carried the codename **CD_002fa7**, derived from International Klein Blue (#002FA7), the colour of the cover of David Tao’s (陶喆) self-titled debut album *David Tao* (1997). This was also the first independent project I completed from start to finish. The colour remains the signature accent of the interface.
 
 > 项目开发代号 CD_002fa7 源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，以此颜色作为代号以表示我对此的一点纪念和对陶喆音乐创作的喜爱和敬意。
 
