@@ -5,7 +5,7 @@ import { useDiagramStore } from '../store/diagramStore'
 import { toSQL } from '../lib/export/toSQL'
 import SQLExportModal from './SQLExportModal'
 
-const BTN  = 'w-full px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
+const BTN  = 'w-[118px] px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
 const RBTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left'
 
 const PADDING = 40
@@ -22,22 +22,16 @@ export default function Toolbar() {
 
   const [nameVal, setNameVal]     = useState(diagram.name)
   const [sqlText, setSqlText]     = useState<string | null>(null)
-  const [leftMinW,  setLeftMinW]  = useState<number | undefined>(undefined)
   const [rightMinW, setRightMinW] = useState<number | undefined>(undefined)
   const fileInputRef  = useRef<HTMLInputElement>(null)
-  const leftPanelRef  = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
-    const measure = (ref: React.RefObject<HTMLDivElement | null>, set: (n: number) => void) => {
-      if (!ref.current) return
-      const btns = ref.current.querySelectorAll<HTMLElement>('button')
-      let max = 0
-      btns.forEach(btn => { if (btn.offsetWidth > max) max = btn.offsetWidth })
-      if (max > 0) set(max)
-    }
-    measure(leftPanelRef,  setLeftMinW)
-    measure(rightPanelRef, setRightMinW)
+    if (!rightPanelRef.current) return
+    const btns = rightPanelRef.current.querySelectorAll<HTMLElement>('button')
+    let max = 0
+    btns.forEach(btn => { if (btn.offsetWidth > max) max = btn.offsetWidth })
+    if (max > 0) setRightMinW(max)
   }, [])
 
   useEffect(() => { setNameVal(diagram.name) }, [diagram.name])
@@ -137,17 +131,18 @@ export default function Toolbar() {
     <>
       {/* ── Left panel: canvas-level actions only ── */}
       <Panel position="top-left">
-        <div ref={leftPanelRef} className="flex flex-col gap-1" style={{ width: 'max-content', minWidth: leftMinW }}>
+        <div className="flex flex-col gap-1 w-fit">
           <input
             value={nameVal}
             onChange={e => setNameVal(e.target.value)}
             onBlur={commitName}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitName() } }}
             placeholder="Untitled Diagram"
-            className="px-3 py-1.5 text-sm font-medium border border-gray-300 rounded bg-white outline-none focus:border-gray-500 w-full"
+            size={Math.max(nameVal.length, 10)}
+            className="px-3 py-1.5 text-sm font-medium border border-gray-300 rounded bg-white outline-none focus:border-gray-500"
             style={{ color: '#002FA7' }}
           />
-          <button onClick={handleAddEntity} className={BTN} style={{ minWidth: leftMinW }}>Add Entity</button>
+          <button onClick={handleAddEntity} className={BTN}>Add Entity</button>
           {oneEntity && (
             <button
               onClick={() => {
@@ -155,7 +150,6 @@ export default function Toolbar() {
                 addAttribute(selection.entityIds[0], { name: 'attribute', kind })
               }}
               className={BTN}
-              style={{ minWidth: leftMinW }}
             >
               Add Attribute
             </button>
