@@ -1,10 +1,11 @@
 > This project was developed with the assistance of Claude Code (Anthropic). DESIGN.md served as the primary context document across all development sessions.
 
-# ER Diagram Editor: Design Document
+# SparkER: Design Document
 
-**Project codename:** `CD_002fa7` (#002FA7)
-**Status:** Pre-implementation design complete. Ready for scaffolding.
-**Last updated:** 2026-04-19
+**Official name:** SparkER
+**Development codename:** `CD_002fa7` (#002FA7)
+**Status:** All planned phases implemented and deployed.
+**Last updated:** 2026-04-27
 
 ---
 
@@ -32,7 +33,7 @@ The canonical specification for Barker notation is Ivey Publishing technical not
 
 ## 2. Scope
 
-### Phase 1 (MVP)
+### Phase 1 (MVP) ✓ Complete
 
 - Strong entities with attributes (identifier, required, optional)
 - Relationships: 1:1 and 1:m (m:m is represented via intersection entity plus two 1:m relationships, never directly)
@@ -41,37 +42,40 @@ The canonical specification for Barker notation is Ivey Publishing technical not
 - Save and load diagrams as JSON files
 - Export as PNG and SVG
 
-### Phase 2
+### Phase 2 ✓ Complete
 
 - Weak entities with UID bar annotations
-- Recursive relationships (self referential)
-- Half optional relationship variants
-- SQL DDL export (CREATE TABLE statements with foreign keys)
+- Recursive relationships (self-referential), including recursive m:m shortcut
+- Half optional relationship variants (per-end independent optionality)
+- SQL DDL export (CREATE TABLE statements with primary keys, foreign keys, NOT NULL constraints)
 
-### Phase 3
+### Phase 3 ✓ Complete
 
-- Super entities with nested sub entities
-- Exclusive relationship arcs
-- Undo and redo
-- Grid snap and alignment helpers
-- Keyboard shortcuts
-- Optional desktop build via Tauri
+- Super-entities with nested sub-entities (React Flow parentId nesting, auto-expanding container)
+- Exclusive relationship arcs (SVG Bézier overlay, click-to-select, keyboard delete)
+- Undo and redo (zundo temporal middleware, Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z)
+- Snap-to-center alignment guides during drag
+- Keyboard shortcuts (Delete, Escape, Ctrl+A, Enter/Backspace in attribute editing)
+- UX redesign: entity actions consolidated into Properties sidebar (see Section 6.9)
+- Privacy modal with Content Security Policy enforcement (see Section 6.10)
 
 ### Explicitly out of scope (for the foreseeable future)
 
 - Other notations (Chen, IDEF1X, crow's foot, UML)
-- Real time multi user collaboration
-- Server side persistence or user accounts
+- Real-time multi-user collaboration
+- Server-side persistence or user accounts
 - Mobile responsive editing (desktop viewport only)
+- Desktop build via Tauri
 
 ---
 
 ## 3. Distribution
 
-- Hosted on GitHub Pages from the project repository
+- Hosted on GitHub Pages from the project repository (`testing-tree/CD_002fa7`)
 - MIT License
-- README with live demo link, feature list, screenshots, and basic usage guide
-- Shared with instructor (Ivey Data Management course) for teaching use
+- README with live demo link, feature list, and full usage guide
+- Officially named **SparkER** — name suggested by Professor Derrick Neufeld of Ivey Business School
+- Shared with the Ivey Data Management course for teaching use
 - Portfolio piece for job applications in consulting, tech consulting, and analytics
 
 ---
@@ -207,7 +211,25 @@ Barker is explicitly software agnostic at the logical level, and data types belo
 
 The `order` field on `Attribute` allows arbitrary sequencing. When the UI creates a new attribute, the default behavior is to place `identifier` kind attributes before any `required` or `optional` attributes. Users can then manually reorder via drag. This respects the Barker convention of identifiers first while allowing composite identifier fine tuning.
 
-### 6.8 One diagram per browser tab
+### 6.9 Entity actions live in the Properties sidebar, not the toolbar
+
+After the initial MVP, the toolbar accumulated entity-specific buttons (Recursive, Recursive m:m, Add Sub-entity, Exclusive Arc) that only apply when a specific entity is selected. This cluttered the canvas and violated the principle that the toolbar should contain canvas-level operations only.
+
+The redesign consolidates all entity-specific actions into an **Actions** subsection of `PropertyPanel`, visible only when an entity is selected. The toolbar retains only two buttons: Add Entity (always) and Add Attribute (when exactly one entity is selected). The Properties panel is always rendered (248px wide) so the Privacy button at its bottom is always accessible regardless of selection state.
+
+The title input in the toolbar auto-sizes to its content using a hidden measuring `<span>` with identical font styles, updated on every keystroke. The action buttons use a fixed width sized to the longest label ("Add Attribute") so both buttons are visually uniform.
+
+### 6.10 Privacy and Content Security Policy
+
+SparkER stores no user data outside the browser. This is both a design commitment and a technical enforcement:
+
+- No backend server, no third-party analytics, no cookies, no external fetch calls anywhere in the source.
+- `index.html` includes a `Content-Security-Policy` meta tag with `connect-src 'none'`, which causes the browser itself to block any outbound network connection even if a dependency attempted one.
+- `img-src 'self' data: blob:` is required because PNG and SVG export produce `data:` and `blob:` URLs in the browser.
+- `localStorage` is used for a single flag (`sparker_privacy_seen`) to suppress the first-visit Privacy modal on subsequent visits. The flag contains no personal data or diagram content.
+- A `PrivacyModal` component displays the data-use terms on first visit and is accessible at any time via the Privacy button at the bottom of `PropertyPanel`.
+
+### 6.11 One diagram per browser tab
 
 The tool does not manage multiple diagrams within a single session. Each tab holds one `Diagram`. Users needing to work on several diagrams simultaneously open multiple tabs. Rationale: ER diagrams, unlike spreadsheets, have no cross diagram references to justify in app multi document management.
 
@@ -217,22 +239,31 @@ The tool does not manage multiple diagrams within a single session. Each tab hol
 
 ```
 <App>
-├── <Toolbar>                  Top bar: File menu, Export, View controls, Undo and Redo
-├── <MainLayout>
-│   ├── <Sidebar>              Left: tool palette (Add Entity, Add Relationship, Snippets)
-│   ├── <CanvasArea>
-│   │   └── <ReactFlow>        Core canvas
-│   │       ├── <EntityNode>   Custom node: rounded rectangle plus attribute list
-│   │       └── <BarkerEdge>   Custom edge: crow's foot, dashed lines, UID bars, verb labels
-│   └── <PropertyPanel>        Right: detailed editor for selected element
-└── <StatusBar>                Bottom: validation warnings, zoom level, diagram name
+├── <Canvas>                       React Flow wrapper; owns nodes, edges, and all RF callbacks
+│   ├── <EntityNode>               Custom node: entity box, attribute list, inline name/attr editing
+│   ├── <BarkerEdge>               Custom edge: crow's foot, dashed optionality, UID bars, verb labels
+│   │                              Uses shared geometry helpers from edgeGeometry.ts
+│   ├── <Toolbar>                  Two floating panels (React Flow <Panel>):
+│   │   ├── top-left               Diagram name input (auto-sizing) + Add Entity + Add Attribute
+│   │   └── top-right              Save JSON / Load JSON / Export PNG / Export SVG / Export SQL
+│   ├── <UndoRedo>                 Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z; reads zundo temporal store
+│   ├── <SnapGuides>               Alignment guide lines rendered during entity drag
+│   └── <ArcOverlay>               SVG overlay for exclusive arcs; tracks viewport via useViewport()
+└── <PropertyPanel>                Always-visible right sidebar (248px); context-sensitive content
+    ├── Entity selected            Identity info + Actions: Recursive, Recursive m:m,
+    │                              Add Sub-entity, Exclusive Arc (when ≥ 2 outgoing rels)
+    ├── Relationship selected      Per-end config: cardinality, optionality, label, UID bar;
+    │                              many-to-many warning inline
+    ├── Arc selected               Source entity, target list, Delete Arc button
+    └── Privacy button             Always visible at bottom → <PrivacyModal>
 ```
 
 ### Editing principles
 
-- All mutations flow through a single Zustand store. Dual edit surfaces (inline on canvas and via PropertyPanel) both call the same store actions to avoid inconsistent edit paths.
-- `EntityNode` handles inline editing of entity name and attribute list. Relationship configuration (cardinality, optionality, labels, UID bar) happens only in `PropertyPanel`, because inline controls on edges would clutter the canvas.
-- Validation runs as a passive layer. It emits warnings to `StatusBar` without blocking user input, since partial states during editing are normal and expected.
+- All mutations flow through a single Zustand store. All edit surfaces (inline canvas, PropertyPanel, keyboard shortcuts) call the same store actions.
+- `EntityNode` owns inline editing of entity name and attribute list. All relationship and arc configuration happens in `PropertyPanel`.
+- Entity-specific action buttons (Recursive, Add Sub-entity, Exclusive Arc, etc.) live in `PropertyPanel` rather than the toolbar. The toolbar is limited to canvas-level operations that are not selection-dependent.
+- Validation feedback (e.g., many-to-many warning) is surfaced inline in `PropertyPanel` next to the relevant controls, not in a separate status bar.
 
 ---
 
@@ -243,45 +274,46 @@ Using Zustand with the `zundo` middleware for undo and redo. Key slices of the s
 ```typescript
 interface DiagramStore {
   diagram: Diagram;
-  selection: { entityIds: string[]; relationshipIds: string[] };
+  selection: { entityIds: string[]; relationshipIds: string[]; arcIds: string[] };
   viewport: { x: number; y: number; zoom: number };
 
   // Entity actions
   addEntity(partial: Partial<Entity>): string;
   updateEntity(id: string, patch: Partial<Entity>): void;
-  deleteEntity(id: string): void;
+  deleteEntity(id: string): void;          // cascades to sub-entities and their relationships
+  addSubEntity(superEntityId: string, partial: Partial<Entity>): string;
 
   // Attribute actions
-  addAttribute(entityId: string, partial: Partial<Attribute>): void;
+  addAttribute(entityId: string, partial: Partial<Attribute>): string;
   updateAttribute(entityId: string, attrId: string, patch: Partial<Attribute>): void;
   deleteAttribute(entityId: string, attrId: string): void;
   reorderAttributes(entityId: string, newOrder: string[]): void;
 
   // Relationship actions
   addRelationship(partial: Partial<Relationship>): string;
-  updateRelationshipEnd(
-    id: string,
-    end: 'source' | 'target',
-    patch: Partial<RelationshipEnd>
-  ): void;
-  deleteRelationship(id: string): void;
+  updateRelationship(id: string, patch: Partial<Relationship>): void;
+  updateRelationshipEnd(id: string, end: 'source' | 'target', patch: Partial<RelationshipEnd>): void;
+  deleteRelationship(id: string): void;    // also prunes any exclusive arcs that fall below 2 members
+
+  // Exclusive arc actions
+  addExclusiveArc(arc: Omit<ExclusiveArc, 'id'>): string;
+  deleteExclusiveArc(id: string): void;
 
   // Atomic m:m creation: intersection entity plus 2 relationships in one operation
-  createManyToMany(
-    sourceId: string,
-    targetId: string,
-    intersectionName: string
-  ): void;
+  createManyToMany(sourceId: string, targetId: string, intersectionName: string): void;
 
   // Selection
   setSelection(selection: Partial<DiagramStore['selection']>): void;
 
   // Persistence
+  setDiagramName(name: string): void;
   saveToJSON(): string;
   loadFromJSON(json: string): void;
   reset(): void;
 }
 ```
+
+History (undo/redo) is managed by the `zundo` temporal middleware wrapping the store. The `partialize` option limits temporal snapshots to the `diagram` slice only, excluding ephemeral selection and viewport state. History depth is capped at 50 entries.
 
 ---
 
@@ -293,29 +325,27 @@ barker-erd/
 │   ├── types/
 │   │   └── diagram.ts              Canonical Diagram schema (Section 5)
 │   ├── store/
-│   │   ├── diagramStore.ts         Zustand store (Section 8)
-│   │   └── history.ts              zundo undo/redo middleware
+│   │   └── diagramStore.ts         Zustand store + zundo temporal middleware (Section 8)
 │   ├── components/
 │   │   ├── canvas/
-│   │   │   ├── Canvas.tsx          React Flow wrapper
-│   │   │   ├── EntityNode.tsx      Custom node component
-│   │   │   └── BarkerEdge.tsx      Custom edge component (handles all variants)
+│   │   │   ├── Canvas.tsx          React Flow wrapper; nodes, edges, keyboard shortcuts
+│   │   │   ├── EntityNode.tsx      Custom node: entity box + inline attribute editing
+│   │   │   ├── BarkerEdge.tsx      Custom edge: all relationship variants
+│   │   │   ├── edgeGeometry.ts     Shared ARM endpoint geometry (used by BarkerEdge + ArcOverlay)
+│   │   │   ├── ArcOverlay.tsx      SVG exclusive arc overlay; pan/zoom aware
+│   │   │   └── SnapGuides.tsx      Centre-alignment guide lines during drag
 │   │   ├── panels/
-│   │   │   ├── Toolbar.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   └── PropertyPanel.tsx
-│   │   └── ui/                     Shared primitives (Button, Input, etc.)
+│   │   │   └── PropertyPanel.tsx   Always-visible right sidebar; entity / rel / arc editing
+│   │   ├── ExclusiveArcModal.tsx   Checklist modal for selecting arc relationships
+│   │   ├── SQLExportModal.tsx      SQL preview + copy/download modal
+│   │   ├── PrivacyModal.tsx        Privacy & data use disclosure modal
+│   │   ├── Toolbar.tsx             Diagram name input + canvas-level action buttons
+│   │   └── UndoRedo.tsx            Undo/Redo keyboard handler + button pair
 │   ├── lib/
-│   │   ├── validation/
-│   │   │   └── barkerRules.ts      Validator for Barker conventions (Section 12)
-│   │   ├── export/
-│   │   │   ├── toPNG.ts
-│   │   │   ├── toSVG.ts
-│   │   │   └── toSQL.ts            SQL DDL generator (Phase 2)
-│   │   └── import/
-│   │       └── fromJSON.ts
-│   ├── hooks/
+│   │   └── export/
+│   │       └── toSQL.ts            SQL DDL generator; FK-as-PK for sub-entities
 │   └── App.tsx
+├── index.html                      CSP meta tag enforcing connect-src 'none'
 ├── public/
 ├── package.json
 ├── tsconfig.json
@@ -346,21 +376,37 @@ Tasks listed in dependency order. Each task should be individually small enough 
 14. **PNG export.** ✓ Use `html-to-image` on the React Flow container. Strip UI chrome (handles, controls) before capture. Fit all nodes in frame via `getNodesBounds` / `getViewportForBounds`.
 15. **SVG export.** ✓ Use `html-to-image` `toSvg` with the same fit-all-nodes approach as PNG export.
 
-### Phase 1 acceptance test
+### Phase 1 acceptance test ✓
 
-The tool should be able to reproduce the **Broken Phone Wizard Part 1** diagram from Ivey technical note W38454 (page 8), which uses only Phase 1 features: 6 entities, a mandatory 1:1 between CUSTOMER and CUST_PROFILE, mandatory 1:m between CUSTOMER and DEVICE, another between DEVICE and REPAIR_TICKET, and an m:m between TECHNICIAN and REPAIR_TICKET resolved through a TECH_TICKET intersection entity.
+The tool reproduces the **Broken Phone Wizard Part 1** diagram from W38454 (page 8): 6 entities, mandatory 1:1 between CUSTOMER and CUST_PROFILE, mandatory 1:m between CUSTOMER and DEVICE, another between DEVICE and REPAIR_TICKET, and an m:m between TECHNICIAN and REPAIR_TICKET resolved through a TECH_TICKET intersection entity.
 
 ---
 
-## 11. Future Phases
+## 11. Implemented Phases
 
-### Phase 2: Weak entities, recursion, half optional, SQL export
+### Phase 2 ✓
 
-Acceptance test: reproduce the **Broken Phone Wizard Part 2** diagram from W38454 (page 14), which adds UID bars on TECH_TICKET's relationships, a recursive supervise relationship on TECHNICIAN, and optional side variants on several relationships.
+Implemented features: UID bar annotations on relationship ends, recursive self-loop relationships at four movable corners, independent per-end optionality (half-optional patterns), SQL DDL export with primary keys, foreign keys, NOT NULL, and composite key support.
 
-### Phase 3: Super entities, exclusive arcs, polish
+Acceptance test passed: **Broken Phone Wizard Part 2** (W38454 page 14) — UID bars on TECH_TICKET, recursive supervise on TECHNICIAN, optional end variants.
 
-Covers super entity nesting (the VEHICLE containing CAR and TRUCK example on W38454 page 13), exclusive relationship arcs (the EMPLOYEE, DEPARTMENT, PROJECT, CONTRACT example on W38454 page 13), undo and redo, grid snap, keyboard shortcuts, and optional Tauri desktop build.
+### Phase 3 ✓
+
+Implemented features:
+
+- **Super-entity / Sub-entity nesting**: Sub-entities use React Flow `parentId` / `extent: 'parent'` to be visually nested inside the super-entity container node. The super-entity auto-expands when a sub-entity is added (`addSubEntity` estimates header height from attribute count). A separator line labeled "sub-entities" divides the attribute area from the sub-entity area. `deleteEntity` cascades to all sub-entities and their relationships.
+
+- **SQL FK-as-PK for sub-entities**: The SQL export generates a foreign key column referencing the super-entity's primary key, marked as the sub-entity's own primary key.
+
+- **Exclusive relationship arcs**: `ArcOverlay` renders a quadratic Bézier arc through ARM endpoints of all participating relationships on the source entity side. Endpoints are sorted by angle around the entity centroid. Control point is offset 56px outward from the entity center. The overlay subscribes to `useViewport()` for live pan/zoom tracking. Clicking the invisible hit area (strokeWidth 18) selects the arc (blue highlight). Delete key and Properties panel button both delete arcs. `deleteRelationship` prunes arcs that fall below 2 members.
+
+- **Undo / Redo**: zundo `temporal` middleware wraps the Zustand store. `partialize` limits snapshots to `diagram` only. History depth: 50.
+
+- **Snap-to-center guides**: During node drag, `Canvas` computes center alignment with other nodes within an 8px threshold and renders blue guide lines via `SnapGuides`. Snapped positions are written to the store at drag-end.
+
+- **Keyboard shortcuts**: Implemented in `Canvas` global keydown handler. Delete/Backspace for nodes, edges, and arcs; Escape to deselect; Ctrl+A to select all entities; Enter/Backspace for attribute row navigation handled in `EntityNode`.
+
+Acceptance test passed: **VEHICLE / CAR / TRUCK** super-entity example (W38454 page 13) and exclusive arc on EMPLOYEE (W38454 page 13).
 
 ---
 
@@ -405,15 +451,16 @@ The validation layer in `src/lib/validation/barkerRules.ts` should flag the foll
 
 ### Where we are
 
-All design work is complete. No code has been written yet. The immediate next step is **Phase 1 Task 1: Project scaffolding** (Section 10).
+All three planned phases are implemented and deployed to GitHub Pages. The tool is feature-complete against the Barker notation spec in W38454.
+
+Active file layout matches Section 9 exactly. The Zustand store interface matches Section 8. No significant deviations from the original schema (Section 5) were required; `parentEntityId` and `size` on `Entity`, and `loopCorner` on `Relationship`, were already present in the original schema design.
 
 ### How to proceed
 
-1. Read this document in full before making changes.
-2. Use the file structure in Section 9 as the target layout.
-3. Respect the Schema in Section 5 as the single source of truth for the Diagram data model. If a feature seems to require changing the schema, raise it explicitly rather than silently modifying interfaces.
-4. When implementing Phase 1 tasks, proceed in the dependency order given in Section 10. Each task should produce a working commit.
-5. Keep a running `CHANGELOG.md` alongside this document to record what has been implemented.
+1. Read this document and the current `README.md` for a full picture of implemented features.
+2. Treat the schema in Section 5 as the single source of truth for the `Diagram` data model. Raise schema changes explicitly rather than silently modifying interfaces.
+3. All mutations must go through the Zustand store actions (Section 8). Direct state mutation outside the store breaks undo history.
+4. The CSP in `index.html` is intentional and must not be weakened without explicit discussion. Any new feature that requires a network call would violate the privacy guarantee in Section 6.10.
 
 ### Conventions
 
