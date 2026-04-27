@@ -385,7 +385,7 @@ export default function PropertyPanel() {
       </div>{/* end scrollable content */}
 
       {/* ── Privacy button ── */}
-      <div className="px-4 pb-4 pt-2 border-t border-gray-100 flex justify-end">
+      <div className="px-4 pb-4 pt-2 border-t border-gray-100">
         <button
           onClick={() => setShowPrivacyModal(true)}
           className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer tracking-wide"
