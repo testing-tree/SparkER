@@ -197,8 +197,16 @@ export default function PropertyPanel() {
   const addSubEntity     = useDiagramStore(s => s.addSubEntity)
   const addExclusiveArc  = useDiagramStore(s => s.addExclusiveArc)
 
-  const [showArcModal, setShowArcModal]       = useState(false)
+  const [showArcModal, setShowArcModal]         = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+
+  // Show privacy modal on first visit (localStorage is local-only, no data leaves the device)
+  useEffect(() => {
+    if (!localStorage.getItem('sparker_privacy_seen')) {
+      setShowPrivacyModal(true)
+      localStorage.setItem('sparker_privacy_seen', '1')
+    }
+  }, [])
 
   const selectedEntityId = selection.entityIds[0] ?? null
   const selectedRelId    = selection.relationshipIds[0] ?? null
@@ -224,7 +232,7 @@ export default function PropertyPanel() {
   return (
     <div
       className="shrink-0 h-full border-l border-gray-200 bg-white flex flex-col overflow-x-hidden"
-      style={{ minWidth: 280, width: 280 }}
+      style={{ minWidth: 248, width: 248 }}
     >
       {/* ── Scrollable content ── */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -377,12 +385,12 @@ export default function PropertyPanel() {
       </div>{/* end scrollable content */}
 
       {/* ── Privacy button ── */}
-      <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+      <div className="px-4 pb-4 pt-2 border-t border-gray-100 flex justify-end">
         <button
           onClick={() => setShowPrivacyModal(true)}
-          className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer"
+          className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer tracking-wide"
         >
-          🔒 Privacy
+          Privacy
         </button>
       </div>
 
