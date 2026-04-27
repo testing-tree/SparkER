@@ -32,6 +32,12 @@ The project name comes from **International Klein Blue (#002FA7)**, also the ico
 - Clear an attribute name entirely, then press **Backspace** again to delete that attribute
 - Delete entities and all connected relationships with the Delete key
 
+### Super-entities and Sub-entities
+- Select an entity and click **Add Sub-entity** in the Properties panel to create a sub-entity nested inside it
+- The super-entity auto-expands to contain its sub-entities; a labeled separator line divides the name/attributes section from the sub-entity area
+- Sub-entities inherit a foreign-key-as-primary-key in SQL export, referencing their super-entity
+- Deleting a super-entity cascades and removes all its sub-entities and their relationships
+
 ### Relationships
 - Drag from any of an entity's four connection handles to create a relationship
 - Relationships route orthogonally with automatic side selection and **distributed connection points** (multiple lines entering or exiting the same entity side are spread evenly, never stacked)
@@ -46,9 +52,23 @@ The project name comes from **International Klein Blue (#002FA7)**, also the ico
 - Drag to create a recursive relationship directly by connecting any handle back to the same entity; the corner is determined automatically from the handles used
 - **Recursive m:m**: creates an intersection entity offset from the selected entity and connects it with two 1:m relationships, forming a V-shape for recursive many-to-many scenarios
 
+### Exclusive Relationship Arcs
+- Select an entity that has two or more outgoing relationships, then click **Exclusive Arc** in the Properties panel
+- A modal lets you select which relationships (≥ 2) are mutually exclusive; confirms with an arc drawn in the SVG overlay
+- The arc renders as a quadratic Bézier curve passing through all selected relationship endpoints on the source entity side, with a filled dot at each endpoint
+- Click the arc to select it (highlights in blue); the Properties panel shows the arc's source entity and target entities
+- Delete a selected arc with the **Delete** key or via the **Delete Arc** button in the Properties panel
+- Arcs are automatically cleaned up when a relationship they reference is deleted
+
 ### Many-to-Many Relationships
 - Direct many-to-many is not allowed in Barker notation; the Properties panel warns when both ends are set to "many"
 - Create an intersection entity manually, then connect it with two 1:m relationships
+
+### Properties Panel
+- Click any entity, relationship, or arc to open its Properties panel on the right
+- **Entity**: shows entity type (entity / super-entity / sub-entity), hierarchy info, and an **Actions** section with context-sensitive operations: Recursive, Recursive m:m, Add Sub-entity, and Exclusive Arc (when eligible)
+- **Relationship**: configure cardinality, optionality, verb label, and UID bar for each end independently; many-to-many warning shown inline
+- **Arc**: shows source entity and target entity list; Delete Arc button
 
 ### Canvas
 - Pan and zoom freely; zoom controls in the bottom-left corner
@@ -96,7 +116,15 @@ Common configurations:
 | Customer may optionally have a profile | one / optional | one / mandatory |
 | Technician optionally supervises others | one / optional | many / optional |
 
-### 5. Export
+### 5. Add sub-entities (optional)
+
+Select a super-entity and click **Add Sub-entity** in the Properties panel Actions section. Enter the sub-entity name when prompted. The super-entity box expands automatically and shows a separator line labeled *sub-entities*. Sub-entities can have their own attributes and relationships. In SQL export, the sub-entity receives a foreign-key-as-primary-key column pointing to the super-entity.
+
+### 6. Mark exclusive arcs (optional)
+
+Select an entity that has at least two outgoing relationships, then click **Exclusive Arc** in the Properties panel. A checklist shows all eligible target relationships — tick two or more and click **Add Arc**. A Bézier arc with endpoint dots appears on the canvas. Click the arc to select it; press **Delete** or use the Properties panel to remove it.
+
+### 7. Export
 
 Use the buttons in the top-right corner. For sharing a diagram image, **Export PNG** produces a clean white-background file cropped to your diagram. For database implementation, **Export SQL** generates ready-to-use DDL statements.
 
@@ -106,7 +134,7 @@ Use the buttons in the top-right corner. For sharing a diagram image, **Export P
 
 | Key | Action |
 |---|---|
-| `Delete` / `Backspace` | Delete selected entity or relationship |
+| `Delete` / `Backspace` | Delete selected entity, relationship, or exclusive arc |
 | `Escape` | Deselect all / cancel editing |
 | `Ctrl/Cmd + A` | Select all entities |
 | `Ctrl/Cmd + Z` | Undo |
@@ -129,6 +157,8 @@ Key rules enforced or supported by this editor:
 - The "many" end of a relationship shows a crow's foot symbol
 - Weak entity identification: UID bar tick mark on the relationship line
 - Many-to-many relationships require an intersection entity (direct m:m is flagged as invalid)
+- Super-entity / sub-entity hierarchies with visual nesting and FK-as-PK in SQL output
+- Exclusive relationship arcs: Bézier arc with endpoint dots indicates mutually exclusive relationship participation
 
 ---
 
