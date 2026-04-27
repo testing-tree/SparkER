@@ -34,6 +34,7 @@ SparkER runs entirely in your browser. No data ever leaves your device.
 - No outbound network calls of any kind
 
 A Content Security Policy (`connect-src 'none'`) is enforced at the browser level to make this a technical guarantee. 
+
 Click the **Privacy** button in the app for full details and instructions on how to verify this yourself.
 
 ---
