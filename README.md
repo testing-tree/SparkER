@@ -19,6 +19,7 @@ This project bridges that gap. It is a custom-built, web-based visual editor des
 The tool is officially named **SparkER**, a nod to Entity-Relationship modelling, and to the idea that a single course can spark something that outlasts the semester. The name was suggested by Professor Derrick Neufeld of Ivey Business School.
 
 > During development, the project carried the codename **CD_002fa7**, inspired by International Klein Blue (#002FA7), the iconic cover color of David Tao’s self-titled debut album (1997). As this represents my first independent project. The colour serves both as a personal milestone and a tribute to the artistry of David Tao.
+
 > 项目开发代号 CD_002fa7 源自国际克莱因蓝 (#002FA7)。它也是音乐人陶喆 (David Tao) 首张个人专辑《陶喆》(1997) 的封面颜色。这同样是我首次尝试独立完成这样的项目，以此颜色作为代号以表示我对此的一点纪念和对陶喆音乐创作的喜爱和敬意。
 
 ---
