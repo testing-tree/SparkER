@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDiagramStore } from '../../store/diagramStore'
 import type { Relationship, RelationshipEnd } from '../../types/diagram'
-import ExclusiveArcModal from '../ExclusiveArcModal'
 import PrivacyModal from '../PrivacyModal'
 
 // ── Button styles ─────────────────────────────────────────────────────────────
@@ -194,10 +193,7 @@ export default function PropertyPanel() {
   const setSelection     = useDiagramStore(s => s.setSelection)
   const addRelationship  = useDiagramStore(s => s.addRelationship)
   const addEntity        = useDiagramStore(s => s.addEntity)
-  const addSubEntity     = useDiagramStore(s => s.addSubEntity)
-  const addExclusiveArc  = useDiagramStore(s => s.addExclusiveArc)
 
-  const [showArcModal, setShowArcModal]         = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
 
   // Show privacy modal on first visit (localStorage is local-only, no data leaves the device)
@@ -221,13 +217,6 @@ export default function PropertyPanel() {
   const arc = selectedArcId
     ? diagram.exclusiveArcs.find(a => a.id === selectedArcId) ?? null
     : null
-
-  // Outgoing non-self relationships eligible for exclusive arc
-  const eligibleArcRels = entity
-    ? diagram.relationships.filter(
-        r => r.sourceEntityId === entity.id && r.sourceEntityId !== r.targetEntityId
-      )
-    : []
 
   return (
     <div
@@ -306,21 +295,6 @@ export default function PropertyPanel() {
               >
                 Recursive m:m
               </button>
-              <button
-                className={ACT_BTN}
-                onClick={() => {
-                  const name = window.prompt('Sub-entity name:')
-                  if (!name?.trim()) return
-                  addSubEntity(entity.id, { name: name.trim().toUpperCase(), attributes: [] })
-                }}
-              >
-                Add Sub-entity
-              </button>
-              {eligibleArcRels.length >= 2 && (
-                <button className={ACT_BTN} onClick={() => setShowArcModal(true)}>
-                  Exclusive Arc
-                </button>
-              )}
             </div>
           </div>
         )
@@ -393,19 +367,6 @@ export default function PropertyPanel() {
           Privacy
         </button>
       </div>
-
-      {/* ── Exclusive arc modal ── */}
-      {showArcModal && entity && (
-        <ExclusiveArcModal
-          relationships={eligibleArcRels}
-          entities={diagram.entities}
-          onConfirm={ids => {
-            addExclusiveArc({ sourceEntityId: entity.id, relationshipIds: ids })
-            setShowArcModal(false)
-          }}
-          onClose={() => setShowArcModal(false)}
-        />
-      )}
 
       {/* ── Privacy modal ── */}
       {showPrivacyModal && (

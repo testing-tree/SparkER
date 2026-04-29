@@ -49,6 +49,7 @@ function InlineInput({
   onCancel,
   onEnter,
   onDeleteEmpty,
+  maxLength,
   className = '',
 }: {
   value: string
@@ -57,12 +58,14 @@ function InlineInput({
   onCancel: () => void
   onEnter?: () => void
   onDeleteEmpty?: () => void
+  maxLength?: number
   className?: string
 }) {
   return (
     <input
       autoFocus
       value={value}
+      maxLength={maxLength}
       onChange={e => onChange(e.target.value)}
       onFocus={e => e.target.select()}
       onBlur={onCommit}
@@ -156,7 +159,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   }
 
   const commitAttr = (attr: Attribute) => {
-    const v = attrVal.trim().toLowerCase()
+    const v = attrVal.trim().replace(/ /g, '_').slice(0, 64).toLowerCase()
     if (v) updateAttr(entityId, attr.id, { name: v })
     useDiagramStore.temporal.getState().resume()
     setEditingAttrId(null)
@@ -164,7 +167,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   }
 
   const commitAttrAndContinue = (attr: Attribute) => {
-    const v = attrVal.trim().toLowerCase()
+    const v = attrVal.trim().replace(/ /g, '_').slice(0, 64).toLowerCase()
     if (v) updateAttr(entityId, attr.id, { name: v })
     useDiagramStore.temporal.getState().resume()
     // Add next attribute (always 'required' since at least one already exists) and edit it.
@@ -213,9 +216,9 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
         </span>
       ))}
 
-      {/* Entity name — min-h-[40px] so the divider lands at the vertical midpoint */}
+      {/* Entity name */}
       <div
-        className="border-b-2 border-gray-800 px-3 min-h-[40px] flex items-center justify-center cursor-text"
+        className="px-3 min-h-[40px] flex items-center justify-center cursor-text"
         onDoubleClick={startEditName}
       >
         {editingName ? (
@@ -233,7 +236,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
         )}
       </div>
 
-      {/* Attribute list — same min-h-[40px] so divider stays centered */}
+      {/* Attribute list */}
       <div className="px-3 min-h-[40px] flex flex-col justify-center">
         {sorted.map(attr => (
           <div key={attr.id} className="flex items-baseline gap-2 text-sm font-mono py-0.5">
@@ -255,6 +258,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                 onEnter={() => commitAttrAndContinue(attr)}
                 onCancel={cancelAttr}
                 onDeleteEmpty={() => deleteEditingAttr(attr)}
+                maxLength={64}
                 className="flex-1 text-gray-700"
               />
             ) : (
