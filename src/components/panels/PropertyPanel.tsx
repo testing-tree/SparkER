@@ -218,14 +218,17 @@ export default function PropertyPanel() {
     ? diagram.exclusiveArcs.find(a => a.id === selectedArcId) ?? null
     : null
 
+  const hasSelection = !!(entity || rel || arc)
+
   return (
+    <>
     <div
-      className="shrink-0 h-full border-l border-gray-200 bg-white flex flex-col overflow-x-hidden"
-      style={{ minWidth: 248, width: 248 }}
+      className={`shrink-0 h-full bg-white flex flex-col overflow-hidden transition-all duration-200 ease-in-out${hasSelection ? ' border-l border-gray-200' : ''}`}
+      style={{ width: hasSelection ? 280 : 0, minWidth: hasSelection ? 280 : 0 }}
     >
       {/* ── Scrollable content ── */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {(entity || rel || arc) && (
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ width: 280 }}>
+      {hasSelection && (
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Properties</p>
       )}
 
@@ -358,8 +361,8 @@ export default function PropertyPanel() {
 
       </div>{/* end scrollable content */}
 
-      {/* ── Privacy button ── */}
-      <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+      {/* ── Privacy button (inside sidebar when open) ── */}
+      <div className="px-4 pb-4 pt-2 border-t border-gray-100" style={{ width: 280 }}>
         <button
           onClick={() => setShowPrivacyModal(true)}
           className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer tracking-wide"
@@ -367,11 +370,22 @@ export default function PropertyPanel() {
           Privacy
         </button>
       </div>
-
-      {/* ── Privacy modal ── */}
-      {showPrivacyModal && (
-        <PrivacyModal onClose={() => setShowPrivacyModal(false)} />
-      )}
     </div>
+
+    {/* ── Privacy button (floating when sidebar closed) ── */}
+    {!hasSelection && (
+      <button
+        onClick={() => setShowPrivacyModal(true)}
+        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-gray-600 cursor-pointer tracking-wide"
+      >
+        Privacy
+      </button>
+    )}
+
+    {/* ── Privacy modal ── */}
+    {showPrivacyModal && (
+      <PrivacyModal onClose={() => setShowPrivacyModal(false)} />
+    )}
+    </>
   )
 }
