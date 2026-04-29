@@ -48,7 +48,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 - Delete entities and all connected relationships with the Delete key
 
 ### Super-entities and Sub-entities
-- Select an entity and click **Add Sub-entity** in the Properties panel to create a sub-entity nested inside it
+- Super-entity / sub-entity hierarchies are supported for display and SQL export; diagrams containing them can be loaded via JSON
 - The super-entity auto-expands to contain its sub-entities; a labeled separator line divides the name/attributes section from the sub-entity area
 - Sub-entities inherit a foreign-key-as-primary-key in SQL export, referencing their super-entity
 - Deleting a super-entity cascades and removes all its sub-entities and their relationships
@@ -68,8 +68,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 - **Recursive m:m**: creates an intersection entity offset from the selected entity and connects it with two 1:m relationships, forming a V-shape for recursive many-to-many scenarios
 
 ### Exclusive Relationship Arcs
-- Select an entity that has two or more outgoing relationships, then click **Exclusive Arc** in the Properties panel
-- A modal lets you select which relationships (≥ 2) are mutually exclusive; confirms with an arc drawn in the SVG overlay
+- Exclusive arcs are supported for display and deletion; diagrams containing them can be loaded via JSON
 - The arc renders as a quadratic Bézier curve passing through all selected relationship endpoints on the source entity side, with a filled dot at each endpoint
 - Click the arc to select it (highlights in blue); the Properties panel shows the arc's source entity and target entities
 - Delete a selected arc with the **Delete** key or via the **Delete Arc** button in the Properties panel
@@ -81,7 +80,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 
 ### Properties Panel
 - Click any entity, relationship, or arc to open its Properties panel on the right
-- **Entity**: shows entity type (entity / super-entity / sub-entity), hierarchy info, and an **Actions** section with context-sensitive operations: Recursive, Recursive m:m, Add Sub-entity, and Exclusive Arc (when eligible)
+- **Entity**: shows entity type (entity / super-entity / sub-entity), hierarchy info, and an **Actions** section with context-sensitive operations: Recursive and Recursive m:m
 - **Relationship**: configure cardinality, optionality, verb label, and UID bar for each end independently; many-to-many warning shown inline
 - **Arc**: shows source entity and target entity list; Delete Arc button
 
@@ -131,15 +130,7 @@ Common configurations:
 | Customer may optionally have a profile | one / optional | one / mandatory |
 | Technician optionally supervises others | one / optional | many / optional |
 
-### 5. Add sub-entities (optional)
-
-Select a super-entity and click **Add Sub-entity** in the Properties panel Actions section. Enter the sub-entity name when prompted. The super-entity box expands automatically and shows a separator line labeled *sub-entities*. Sub-entities can have their own attributes and relationships. In SQL export, the sub-entity receives a foreign-key-as-primary-key column pointing to the super-entity.
-
-### 6. Mark exclusive arcs (optional)
-
-Select an entity that has at least two outgoing relationships, then click **Exclusive Arc** in the Properties panel. A checklist shows all eligible target relationships — tick two or more and click **Add Arc**. A Bézier arc with endpoint dots appears on the canvas. Click the arc to select it; press **Delete** or use the Properties panel to remove it.
-
-### 7. Export
+### 5. Export
 
 Use the buttons in the top-right corner. For sharing a diagram image, **Export PNG** produces a clean white-background file cropped to your diagram. For database implementation, **Export SQL** generates ready-to-use DDL statements.
 
@@ -188,6 +179,12 @@ Key rules enforced or supported by this editor:
 | State management | Zustand v5 |
 | Undo / Redo | zundo |
 | Image export | html-to-image |
+
+---
+
+## Advanced Features
+
+Sub-entity creation and exclusive arc creation are available in the experimental branch [**CD_002fa7**](https://github.com/testing-tree/CD_002fa7), which serves as a development sandbox for features under exploration. Diagrams created there (including sub-entities and arcs) can be loaded in SparkER via JSON import for viewing, SQL export, and deletion.
 
 ---
 
