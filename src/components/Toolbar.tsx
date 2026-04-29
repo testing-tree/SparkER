@@ -11,7 +11,7 @@ const RBTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-
 const PADDING = 40
 
 export default function Toolbar() {
-  const { getNodes }   = useReactFlow()
+  const { getNodes, fitView } = useReactFlow()
   const diagram        = useDiagramStore(s => s.diagram)
   const selection      = useDiagramStore(s => s.selection)
   const addEntity      = useDiagramStore(s => s.addEntity)
@@ -53,7 +53,8 @@ export default function Toolbar() {
       attributes: [],
       position: { x: 80 + (count % 4) * 220, y: 80 + Math.floor(count / 4) * 180 },
     })
-  }, [diagram.entities.length, addEntity])
+    setTimeout(() => fitView({ padding: 0.15, duration: 200 }), 50)
+  }, [diagram.entities.length, addEntity, fitView])
 
   // ── Save / Load ──────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -162,6 +163,7 @@ export default function Toolbar() {
               onClick={() => {
                 const kind = (selectedEntity?.attributes.length ?? 0) === 0 ? 'identifier' : 'required'
                 addAttribute(selection.entityIds[0], { name: 'attribute', kind })
+                setTimeout(() => fitView({ padding: 0.15, duration: 200 }), 50)
               }}
               className={BTN}
             >

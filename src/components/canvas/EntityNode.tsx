@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
+import { Handle, Position, useReactFlow, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
 import type { Attribute } from '../../types/diagram'
 import { useDiagramStore } from '../../store/diagramStore'
 
@@ -97,6 +97,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   const entityId = (data as EntityNodeData).entityId
 
   const updateNodeInternals = useUpdateNodeInternals()
+  const { fitView } = useReactFlow()
   const entity         = useDiagramStore(s => s.diagram.entities.find(e => e.id === entityId))
   const hasSubEntities = useDiagramStore(s => s.diagram.entities.some(e => e.parentEntityId === entityId))
   const updateEntity   = useDiagramStore(s => s.updateEntity)
@@ -134,6 +135,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
     useDiagramStore.temporal.getState().resume()
     setEditingName(false)
     updateNodeInternals(id)
+    setTimeout(() => fitView({ padding: 0.15, duration: 200 }), 50)
   }
 
   const cancelName = () => {
@@ -164,6 +166,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
     useDiagramStore.temporal.getState().resume()
     setEditingAttrId(null)
     updateNodeInternals(id)
+    setTimeout(() => fitView({ padding: 0.15, duration: 200 }), 50)
   }
 
   const commitAttrAndContinue = (attr: Attribute) => {
