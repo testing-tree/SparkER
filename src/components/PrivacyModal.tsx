@@ -53,6 +53,11 @@ export default function PrivacyModal({ onClose }: { onClose: () => void }) {
             </li>
           </ul>
 
+          <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-800 leading-snug">
+            <span className="font-medium">Save your work: </span>
+            SparkER does not auto-save. Use <span className="font-medium">Save JSON</span> (top right) before closing or refreshing the page.
+          </div>
+
           <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2.5 text-gray-500 leading-snug">
             <span className="font-medium text-gray-600">Verify it yourself: </span>
             Open browser developer tools (<kbd className="font-mono text-[10px] px-1 py-0.5 bg-white border border-gray-300 rounded">F12</kbd> or <kbd className="font-mono text-[10px] px-1 py-0.5 bg-white border border-gray-300 rounded">Cmd+Option+I</kbd>),
@@ -66,7 +71,7 @@ export default function PrivacyModal({ onClose }: { onClose: () => void }) {
           <p className="text-xs text-gray-400">
             SparkER is fully open source.{' '}
             <a
-              href="https://github.com/testing-tree/CD_002fa7"
+              href="https://github.com/testing-tree/SparkER"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-gray-600"
