@@ -129,7 +129,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   }
 
   const commitName = () => {
-    const v = nameVal.trim().toUpperCase()
+    const v = nameVal.trim().replace(/ /g, '_').toUpperCase()
     if (v) updateEntity(entityId, { name: v })
     useDiagramStore.temporal.getState().resume()
     setEditingName(false)
