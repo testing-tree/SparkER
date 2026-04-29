@@ -218,7 +218,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
 
       {/* Entity name */}
       <div
-        className="px-3 min-h-[40px] flex items-center justify-center cursor-text"
+        className="px-3 pt-3 pb-2 flex items-center justify-center cursor-text"
         onDoubleClick={startEditName}
       >
         {editingName ? (
@@ -237,7 +237,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
       </div>
 
       {/* Attribute list */}
-      <div className="px-3 min-h-[40px] flex flex-col justify-center">
+      <div className="px-3 pb-3 flex flex-col">
         {sorted.map(attr => (
           <div key={attr.id} className="flex items-baseline gap-2 text-sm font-mono py-0.5">
             <span
