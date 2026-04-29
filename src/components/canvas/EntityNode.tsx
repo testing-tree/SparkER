@@ -230,6 +230,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
             onChange={setNameVal}
             onCommit={commitName}
             onCancel={cancelName}
+            maxLength={64}
             className="w-full text-center font-bold tracking-wide text-sm uppercase"
           />
         ) : (

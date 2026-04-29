@@ -372,16 +372,6 @@ export default function PropertyPanel() {
       </div>
     </div>
 
-    {/* ── Privacy button (floating when sidebar closed) ── */}
-    {!hasSelection && (
-      <button
-        onClick={() => setShowPrivacyModal(true)}
-        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-gray-600 cursor-pointer tracking-wide"
-      >
-        Privacy
-      </button>
-    )}
-
     {/* ── Privacy modal ── */}
     {showPrivacyModal && (
       <PrivacyModal onClose={() => setShowPrivacyModal(false)} />
