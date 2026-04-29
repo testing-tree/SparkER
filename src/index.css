@@ -15,6 +15,13 @@ body,
   overflow: hidden;
 }
 
+/* Lay out the attribution as a row so the portaled Privacy link sits left of "React Flow" */
+.react-flow__attribution {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+}
+
 /* Show handles when hovering their parent node.
    !important is needed to override React Flow's inline opacity:0 fallback. */
 .react-flow__node:hover .react-flow__handle {

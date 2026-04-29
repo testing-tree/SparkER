@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDiagramStore } from '../../store/diagramStore'
 import type { Relationship, RelationshipEnd } from '../../types/diagram'
-import PrivacyModal from '../PrivacyModal'
 
 // ── Button styles ─────────────────────────────────────────────────────────────
 
@@ -194,16 +193,6 @@ export default function PropertyPanel() {
   const addRelationship  = useDiagramStore(s => s.addRelationship)
   const addEntity        = useDiagramStore(s => s.addEntity)
 
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
-
-  // Show privacy modal on first visit (localStorage is local-only, no data leaves the device)
-  useEffect(() => {
-    if (!localStorage.getItem('sparker_privacy_seen')) {
-      setShowPrivacyModal(true)
-      localStorage.setItem('sparker_privacy_seen', '1')
-    }
-  }, [])
-
   const selectedEntityId = selection.entityIds[0] ?? null
   const selectedRelId    = selection.relationshipIds[0] ?? null
   const selectedArcId    = selection.arcIds?.[0] ?? null
@@ -360,22 +349,7 @@ export default function PropertyPanel() {
       })()}
 
       </div>{/* end scrollable content */}
-
-      {/* ── Privacy button (inside sidebar when open) ── */}
-      <div className="px-4 pb-4 pt-2 border-t border-gray-100" style={{ width: 280 }}>
-        <button
-          onClick={() => setShowPrivacyModal(true)}
-          className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer tracking-wide"
-        >
-          Privacy
-        </button>
-      </div>
     </div>
-
-    {/* ── Privacy modal ── */}
-    {showPrivacyModal && (
-      <PrivacyModal onClose={() => setShowPrivacyModal(false)} />
-    )}
     </>
   )
 }

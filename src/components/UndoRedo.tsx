@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Panel } from '@xyflow/react'
 import { useDiagramStore, useUndoRedo } from '../store/diagramStore'
 import PrivacyModal from './PrivacyModal'
@@ -8,14 +9,10 @@ const BTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-s
 export default function UndoRedo() {
   const canUndo = useUndoRedo(s => s.pastStates.length > 0)
   const canRedo = useUndoRedo(s => s.futureStates.length > 0)
-  const selection = useDiagramStore(s => s.selection)
-  const [minW, setMinW]             = useState<number | undefined>(undefined)
+  const [minW, setMinW]               = useState<number | undefined>(undefined)
   const [showPrivacy, setShowPrivacy] = useState(false)
-  const panelRef                    = useRef<HTMLDivElement>(null)
-
-  const hasSelection = selection.entityIds.length > 0
-    || selection.relationshipIds.length > 0
-    || (selection.arcIds?.length ?? 0) > 0
+  const [attributionEl, setAttributionEl] = useState<Element | null>(null)
+  const panelRef                      = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     if (!panelRef.current) return
@@ -23,6 +20,18 @@ export default function UndoRedo() {
     let max = 0
     btns.forEach(btn => { if (btn.offsetWidth > max) max = btn.offsetWidth })
     if (max > 0) setMinW(max)
+  }, [])
+
+  useEffect(() => {
+    if (!localStorage.getItem('sparker_privacy_seen')) {
+      setShowPrivacy(true)
+      localStorage.setItem('sparker_privacy_seen', '1')
+    }
+  }, [])
+
+  useEffect(() => {
+    const el = document.querySelector('.react-flow__attribution')
+    if (el) setAttributionEl(el)
   }, [])
 
   useEffect(() => {
@@ -45,7 +54,7 @@ export default function UndoRedo() {
 
   return (
     <>
-      <Panel position="bottom-right" style={{ marginBottom: '3rem' }}>
+      <Panel position="bottom-right" style={{ marginBottom: '50px' }}>
         <div ref={panelRef} className="flex flex-col gap-1" style={{ width: 'max-content', minWidth: minW }}>
           <button className={BTN} style={{ minWidth: minW }} disabled={!canUndo}
             onClick={() => useDiagramStore.temporal.getState().undo()}>
@@ -55,16 +64,20 @@ export default function UndoRedo() {
             onClick={() => useDiagramStore.temporal.getState().redo()}>
             Redo
           </button>
-          {!hasSelection && (
-            <button
-              onClick={() => setShowPrivacy(true)}
-              className="px-4 py-1 text-xs text-gray-400 hover:text-gray-600 cursor-pointer text-left"
-            >
-              Privacy
-            </button>
-          )}
         </div>
       </Panel>
+      {attributionEl && createPortal(
+        <>
+          <span aria-hidden style={{ color: '#999', fontSize: '10px', userSelect: 'none' }}> · </span>
+          <button
+            onClick={() => setShowPrivacy(true)}
+            style={{ fontSize: '10px', color: '#999', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Privacy
+          </button>
+        </>,
+        attributionEl
+      )}
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
     </>
   )
