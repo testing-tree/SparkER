@@ -275,6 +275,10 @@ export const useDiagramStore = create<DiagramStore>()(
           ...partial,
           id,
         }
+        // Default target label to opposite side so labels alternate visually
+        if (rel.targetEnd.labelFlipped === undefined) {
+          rel.targetEnd.labelFlipped = true
+        }
         set(s => ({
           diagram: {
             ...s.diagram,

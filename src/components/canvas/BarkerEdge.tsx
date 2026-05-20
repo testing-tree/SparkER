@@ -285,9 +285,9 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
   const midX = (saX + taX) / 2
   const midY = (saY + taY) / 2
 
-  const fullPath   = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${midY} L ${taX} ${midY} L ${taX} ${taY} L ${tx} ${ty}`
-  const sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${midY} L ${midX} ${midY}`
-  const targetPath = `M ${midX} ${midY} L ${taX} ${midY} L ${taX} ${taY} L ${tx} ${ty}`
+  const fullPath   = `M ${sx} ${sy} L ${saX} ${saY} L ${taX} ${taY} L ${tx} ${ty}`
+  const sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${midX} ${midY}`
+  const targetPath = `M ${midX} ${midY} L ${taX} ${taY} L ${tx} ${ty}`
 
   const [slX, slY, slAnchor] = labelPos(sx, sy, srcPos, rel.sourceEnd.labelFlipped ?? false)
   const [tlX, tlY, tlAnchor] = labelPos(tx, ty, tgtPos, rel.targetEnd.labelFlipped ?? false)

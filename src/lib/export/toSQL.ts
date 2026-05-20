@@ -27,6 +27,11 @@ function pkColName(entity: Entity): string {
 // ── Main export ───────────────────────────────────────────────
 
 export function toSQL(diagram: Diagram): string {
+  const dbName = diagram.name
+    ? diagram.name.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_|_$/g, '')
+    : 'my_database'
+
+  const header = `CREATE DATABASE ${dbName};\nUSE ${dbName};\n`
   const entityMap = new Map(diagram.entities.map(e => [e.id, e]))
 
   interface FKEntry {
@@ -37,24 +42,27 @@ export function toSQL(diagram: Diagram): string {
     uidBar:   boolean
   }
 
-  const blocks: string[] = []
+  // ── Build CREATE TABLE blocks (unordered) ────────────────────
+  interface TableBlock {
+    name: string
+    sql: string
+    deps: Set<string>  // table names this table depends on
+  }
+  const tableBlocks: TableBlock[] = []
 
   for (const entity of diagram.entities) {
     const tbl  = tblName(entity)
     const fks: FKEntry[] = []
+    const deps = new Set<string>()
 
     // Sub-entity: FK-as-PK referencing the super-entity
     if (entity.parentEntityId) {
       const superEntity = entityMap.get(entity.parentEntityId)
       if (superEntity) {
         const refCol = pkColName(superEntity)
-        fks.push({
-          colName:  refCol,
-          refTable: tblName(superEntity),
-          refCol,
-          notNull:  true,
-          uidBar:   true,  // FK is also the PK
-        })
+        const refTbl = tblName(superEntity)
+        fks.push({ colName: refCol, refTable: refTbl, refCol, notNull: true, uidBar: true })
+        deps.add(refTbl)
       }
     }
 
@@ -63,53 +71,35 @@ export function toSQL(diagram: Diagram): string {
       const isSelf = rel.sourceEntityId === rel.targetEntityId
 
       if (isSelf && rel.sourceEntityId === entity.id) {
-        // Self-referencing: FK on the 'many' end, always nullable
         const manyEnd =
           rel.sourceEnd.cardinality === 'many' ? rel.sourceEnd :
           rel.targetEnd.cardinality === 'many' ? rel.targetEnd : null
         if (!manyEnd) continue
         const refCol = pkColName(entity)
-        fks.push({
-          colName:  `parent_${refCol}`,
-          refTable: tbl,
-          refCol,
-          notNull:  false,
-          uidBar:   manyEnd.uidBar,
-        })
+        fks.push({ colName: `parent_${refCol}`, refTable: tbl, refCol, notNull: false, uidBar: manyEnd.uidBar })
         continue
       }
 
-      // Many end is target
       if (rel.targetEntityId === entity.id && rel.targetEnd.cardinality === 'many') {
         const src = entityMap.get(rel.sourceEntityId)
         if (!src) continue
         const refCol = pkColName(src)
-        fks.push({
-          colName:  refCol,
-          refTable: tblName(src),
-          refCol,
-          notNull:  rel.targetEnd.optionality === 'mandatory',
-          uidBar:   rel.targetEnd.uidBar,
-        })
+        const refTbl = tblName(src)
+        fks.push({ colName: refCol, refTable: refTbl, refCol, notNull: rel.targetEnd.optionality === 'mandatory', uidBar: rel.targetEnd.uidBar })
+        deps.add(refTbl)
         continue
       }
 
-      // Many end is source
       if (rel.sourceEntityId === entity.id && rel.sourceEnd.cardinality === 'many') {
         const tgt = entityMap.get(rel.targetEntityId)
         if (!tgt) continue
         const refCol = pkColName(tgt)
-        fks.push({
-          colName:  refCol,
-          refTable: tblName(tgt),
-          refCol,
-          notNull:  rel.sourceEnd.optionality === 'mandatory',
-          uidBar:   rel.sourceEnd.uidBar,
-        })
+        const refTbl = tblName(tgt)
+        fks.push({ colName: refCol, refTable: refTbl, refCol, notNull: rel.sourceEnd.optionality === 'mandatory', uidBar: rel.sourceEnd.uidBar })
+        deps.add(refTbl)
         continue
       }
 
-      // 1:1 relationship — FK on target table
       if (
         rel.targetEntityId === entity.id &&
         rel.targetEnd.cardinality === 'one' &&
@@ -118,48 +108,58 @@ export function toSQL(diagram: Diagram): string {
         const src = entityMap.get(rel.sourceEntityId)
         if (!src) continue
         const refCol = pkColName(src)
-        fks.push({
-          colName:  refCol,
-          refTable: tblName(src),
-          refCol,
-          notNull:  rel.targetEnd.optionality === 'mandatory',
-          uidBar:   rel.targetEnd.uidBar,
-        })
+        const refTbl = tblName(src)
+        fks.push({ colName: refCol, refTable: refTbl, refCol, notNull: rel.targetEnd.optionality === 'mandatory', uidBar: rel.targetEnd.uidBar })
+        deps.add(refTbl)
       }
     }
 
     // ── Build column lines ─────────────────────────────────────
     const colLines: string[] = []
-
-    // Own attributes
     const attrs = [...entity.attributes].sort((a, b) => a.order - b.order)
     for (const attr of attrs) {
       const notNull = attr.kind !== 'optional' ? ' NOT NULL' : ''
       colLines.push(`  ${attr.name} ${colType(attr)}${notNull}`)
     }
-
-    // FK columns
     for (const fk of fks) {
       const notNull = fk.notNull ? ' NOT NULL' : ''
       colLines.push(`  ${fk.colName} INT${notNull}`)
     }
-
-    // ── PRIMARY KEY ────────────────────────────────────────────
-    const ownPkCols  = attrs.filter(a => a.kind === 'identifier').map(a => a.name)
-    const fkPkCols   = fks.filter(f => f.uidBar).map(f => f.colName)
-    const pkCols     = [...ownPkCols, ...fkPkCols]
-
+    const ownPkCols = attrs.filter(a => a.kind === 'identifier').map(a => a.name)
+    const fkPkCols  = fks.filter(f => f.uidBar).map(f => f.colName)
+    const pkCols    = [...ownPkCols, ...fkPkCols]
     if (pkCols.length > 0) {
       colLines.push(`  PRIMARY KEY (${pkCols.join(', ')})`)
     }
-
-    // ── FOREIGN KEY constraints ────────────────────────────────
     for (const fk of fks) {
       colLines.push(`  FOREIGN KEY (${fk.colName}) REFERENCES ${fk.refTable}(${fk.refCol})`)
     }
 
-    blocks.push(`CREATE TABLE ${tbl} (\n${colLines.join(',\n')}\n);`)
+    tableBlocks.push({
+      name: tbl,
+      sql: `CREATE TABLE ${tbl} (\n${colLines.join(',\n')}\n);`,
+      deps,
+    })
   }
 
-  return blocks.join('\n\n')
+  // ── Topological sort: independent tables first ──────────────
+  const sorted: TableBlock[] = []
+  const emitted = new Set<string>()
+  let remaining = [...tableBlocks]
+
+  while (remaining.length > 0) {
+    const readyIdx = remaining.findIndex(
+      b => [...b.deps].every(d => d === b.name || emitted.has(d))
+    )
+    if (readyIdx === -1) {
+      // Shouldn't happen with valid diagrams, but fall back to remaining order
+      sorted.push(...remaining)
+      break
+    }
+    const block = remaining.splice(readyIdx, 1)[0]
+    sorted.push(block)
+    emitted.add(block.name)
+  }
+
+  return header + '\n' + sorted.map(b => b.sql).join('\n\n')
 }

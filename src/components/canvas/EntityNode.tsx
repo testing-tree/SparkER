@@ -17,6 +17,8 @@ const KIND_CYCLE: Record<Attribute['kind'], Attribute['kind']> = {
   optional:   'identifier',
 }
 
+const DATA_TYPES = [undefined, 'INT', 'VARCHAR(255)', 'TEXT', 'DATE', 'BOOLEAN', 'DECIMAL(10,2)', 'FLOAT']
+
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
 export type EntityNodeData = { entityId: string }
@@ -100,10 +102,11 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   const { fitView } = useReactFlow()
   const entity         = useDiagramStore(s => s.diagram.entities.find(e => e.id === entityId))
   const hasSubEntities = useDiagramStore(s => s.diagram.entities.some(e => e.parentEntityId === entityId))
-  const updateEntity   = useDiagramStore(s => s.updateEntity)
-  const updateAttr     = useDiagramStore(s => s.updateAttribute)
-  const addAttr        = useDiagramStore(s => s.addAttribute)
-  const deleteAttr     = useDiagramStore(s => s.deleteAttribute)
+  const updateEntity     = useDiagramStore(s => s.updateEntity)
+  const updateAttr       = useDiagramStore(s => s.updateAttribute)
+  const addAttr          = useDiagramStore(s => s.addAttribute)
+  const deleteAttr       = useDiagramStore(s => s.deleteAttribute)
+  const reorderAttributes = useDiagramStore(s => s.reorderAttributes)
 
   const [editingName,   setEditingName]   = useState(false)
   const [nameVal,       setNameVal]       = useState('')
@@ -151,6 +154,14 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
     updateNodeInternals(id)
   }
 
+  const cycleDataType = (e: React.MouseEvent, attr: Attribute) => {
+    e.stopPropagation()
+    const idx = DATA_TYPES.indexOf(attr.dataTypeHint)
+    const next = DATA_TYPES[(idx + 1) % DATA_TYPES.length]
+    updateAttr(entityId, attr.id, { dataTypeHint: next })
+    updateNodeInternals(id)
+  }
+
   // ── Attribute name editing ─────────────────────────────────────
 
   const startEditAttr = (e: React.MouseEvent, attr: Attribute) => {
@@ -190,6 +201,20 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
     useDiagramStore.temporal.getState().resume()
     deleteAttr(entityId, attr.id)
     setEditingAttrId(null)
+    updateNodeInternals(id)
+  }
+
+  // ── Attribute reorder ─────────────────────────────────────────
+
+  const moveAttr = (attrId: string, dir: -1 | 1) => {
+    const allIds = sorted.map(a => a.id)
+    const idx = allIds.indexOf(attrId)
+    if (idx === -1) return
+    const tgt = idx + dir
+    if (tgt < 0 || tgt >= allIds.length) return
+    allIds.splice(idx, 1)
+    allIds.splice(tgt, 0, attrId)
+    reorderAttributes(entityId, allIds)
     updateNodeInternals(id)
   }
 
@@ -242,8 +267,31 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
 
       {/* Attribute list */}
       <div className="px-3 pb-3 flex flex-col">
-        {sorted.map(attr => (
-          <div key={attr.id} className="flex items-baseline gap-2 text-sm font-mono py-0.5">
+        {sorted.map((attr, i) => (
+          <div key={attr.id}
+            className="relative flex items-baseline gap-1.5 text-sm font-mono py-0.5"
+          >
+            {/* ── Reorder arrows (left, outside box) – only when entity selected ── */}
+            {selected && !editingAttrId && (
+              <span
+                className="absolute flex flex-col text-[7px] leading-none select-none bg-white rounded-sm px-0.5 py-px shadow-sm"
+                style={{ left: -32, top: '50%', transform: 'translateY(-50%)' }}
+              >
+                <button
+                  className="text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-default"
+                  disabled={i === 0}
+                  onClick={e => { e.stopPropagation(); moveAttr(attr.id, -1) }}
+                  title="Move up"
+                >▲</button>
+                <button
+                  className="text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-default"
+                  disabled={i === sorted.length - 1}
+                  onClick={e => { e.stopPropagation(); moveAttr(attr.id, 1) }}
+                  title="Move down"
+                >▼</button>
+              </span>
+            )}
+
             <span
               className={[
                 'w-3 shrink-0 cursor-pointer',
@@ -274,6 +322,21 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                 onClick={e => startEditAttr(e, attr)}
               >
                 {attr.name}
+              </span>
+            )}
+
+            {/* ── Data type (right, outside box) – only when entity selected ── */}
+            {selected && !editingAttrId && (
+              <span
+                onClick={e => cycleDataType(e, attr)}
+                className={[
+                  'absolute text-[9px] font-mono cursor-pointer select-none whitespace-nowrap bg-white rounded-sm px-0.5 py-px shadow-sm',
+                  attr.dataTypeHint ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600',
+                ].join(' ')}
+                style={{ left: 'calc(100% + 24px)', top: '50%', transform: 'translateY(-50%)' }}
+                title="Click to set SQL data type"
+              >
+                {attr.dataTypeHint ?? 'auto'}
               </span>
             )}
           </div>
