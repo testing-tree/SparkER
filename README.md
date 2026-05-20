@@ -46,6 +46,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 - While editing an attribute name, press **Enter** to confirm and immediately jump to a new attribute row (the new name is auto-selected, ready to type over); press **Escape** or click away to confirm without adding a new row
 - Clear an attribute name entirely, then press **Backspace** again to delete that attribute
 - Delete entities and all connected relationships with the Delete key
+- Select an entity to reveal up/down arrows (left) and data type tags (right) outside the entity box for each attribute; click the arrows to reorder attributes, click the data type tag to cycle through `auto` / `INT` / `VARCHAR(255)` / `TEXT` / `DATE` / `BOOLEAN` / `DECIMAL(10,2)` / `FLOAT`
 
 ### Super-entities and Sub-entities
 - Super-entity / sub-entity hierarchies are supported for display and SQL export; diagrams containing them can be loaded via JSON
@@ -55,10 +56,11 @@ Click the **Privacy** button in the app for full details and instructions on how
 
 ### Relationships
 - Drag from any of an entity's four connection handles to create a relationship
-- Relationships route orthogonally with automatic side selection and **distributed connection points** (multiple lines entering or exiting the same entity side are spread evenly, never stacked)
+- Relationships route with clean 3-segment lines, automatic side selection, and **distributed connection points** (multiple lines entering or exiting the same entity side are spread evenly, never stacked)
 - Configure per-end properties in the Properties panel: cardinality (one / many), optionality (mandatory / optional), verb label, and UID bar
 - Optional ends render as dashed lines; the two halves of a relationship line are styled independently (half-dashed, half-solid)
 - Crow's foot symbol on the "many" end; UID bar tick mark for weak entity identification
+- Verb labels default to alternating sides of the line for cleaner readability; click any label to flip it to the opposite side
 
 ### Recursive Loops
 - Add a recursive relationship to any entity via the **Recursive** button
@@ -94,7 +96,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 - **Load JSON**: restore a previously saved diagram
 - **Export PNG**: white-background image cropped tightly to diagram content
 - **Export SVG**: scalable vector export, also cropped to content
-- **Export SQL**: generate `CREATE TABLE` statements from the diagram, including primary keys, foreign keys, NOT NULL constraints, and composite keys for weak entities
+- **Export SQL**: generates `CREATE DATABASE` / `USE` header from the diagram name, followed by `CREATE TABLE` statements sorted with independent tables (no foreign keys) before dependent ones; attribute data types follow manual overrides when set, otherwise are auto-inferred (`*_id` → `INT`, `*date*` → `DATE`, others → `VARCHAR(255)`)
 
 ---
 
@@ -113,6 +115,8 @@ Select the entity, then click **Add Attribute**. A new attribute row appears wit
 - `o` — optional (nullable)
 
 Click the attribute name to rename it (Barker convention: lowercase, e.g. `customer_id`). Press **Enter** to confirm and immediately start a new row; press **Escape** or click away to finish without adding another.
+
+When the entity is selected, each attribute row shows up/down arrows on the left to reorder, and a data type tag on the right (e.g. `INT`, `VARCHAR(255)`). Click the tag to cycle through types; `auto` infers the type from the attribute name for SQL export.
 
 ### 3. Connect two entities
 
