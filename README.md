@@ -102,29 +102,47 @@ Click the **Privacy** button in the app for full details and instructions on how
 
 ## How to Use
 
-### 1. Create your first entity
+### Interface overview
 
-Click **Add Entity** in the top-left toolbar. A new entity box labelled `ENTITY` appears on the canvas. Double-click the name to rename it (Barker convention: uppercase, singular — e.g. `CUSTOMER`).
+| Location | Controls |
+|---|---|
+| **Top-left** | Diagram name (click to edit), **Add Entity**, **Add Attribute** (when an entity is selected) |
+| **Top-right** | **Save JSON**, **Load JSON**, **Export PNG**, **Export SVG**, **Export SQL** |
+| **Bottom-left** | Zoom controls (zoom in, zoom out, fit-to-view), **?** help button |
+| **Bottom-right** | **Lock/Unlock** viewport, **Undo**, **Redo** |
+| **Bottom edge** | **Privacy** link (opens privacy & data use info) |
+| **Right side** | **Properties** panel (appears when an entity, relationship, or arc is selected) |
 
-### 2. Add attributes
+### 1. Create and name entities
 
-Select the entity, then click **Add Attribute**. A new attribute row appears with the `#` prefix (or `*` if identifiers already exist). Click the prefix symbol to cycle it:
+Click **Add Entity** (top-left toolbar) to create a new entity box labelled `ENTITY`. The entity appears on the canvas with a staggered position. Double-click the entity name to rename it (Barker convention: uppercase, singular — e.g. `CUSTOMER`). The name is auto-converted to uppercase with spaces replaced by underscores; maximum 64 characters.
+
+### 2. Add and manage attributes
+
+Select an entity (click it), then click **Add Attribute** (top-left). The first attribute defaults to `#` (identifier / primary key); subsequent attributes default to `*` (required / NOT NULL). Click the prefix symbol to cycle through:
 
 - `#` — identifier (primary key)
-- `*` — required (not null)
+- `*` — required (NOT NULL)
 - `o` — optional (nullable)
 
-Click the attribute name to rename it (Barker convention: lowercase, e.g. `customer_id`). Press **Enter** to confirm and immediately start a new row; press **Escape** or click away to finish without adding another.
+Click the attribute name to rename it (Barker convention: lowercase, e.g. `customer_id`). Spaces are auto-converted to underscores; maximum 64 characters. Press **Enter** to confirm and immediately jump to a new attribute row. Press **Escape** or click away to finish editing. Press **Backspace** on an empty attribute name to delete it.
 
-When the entity is selected, each attribute row shows up/down arrows on the left to reorder, and a data type tag on the right (e.g. `INT`, `VARCHAR(255)`). Click the tag to cycle through types; `auto` infers the type from the attribute name for SQL export.
+**Reorder attributes:** When an entity is selected, each attribute row shows small up/down arrow buttons to the left of the entity box. Clicking them moves the attribute up or down one position.
 
-### 3. Connect two entities
+**Set SQL data type:** When an entity is selected, each attribute row shows a data type tag to the right of the entity box (e.g. `INT`, `VARCHAR(255)`). Click the tag to cycle through `auto` (infers type from the name) → `INT` → `VARCHAR(255)` → `TEXT` → `DATE` → `BOOLEAN` → `DECIMAL(10,2)` → `FLOAT`. The chosen type is used in SQL export.
 
-Hover over an entity to reveal four blue connection handles, one on each side. Drag from any handle to any handle on another entity. A relationship line appears with default settings (1:1 mandatory).
+### 3. Connect entities with relationships
 
-### 4. Configure the relationship
+Hover over an entity to reveal four blue connection handles (one on each side). Drag from any handle to any handle on another entity. A relationship line appears with default settings (1:1 mandatory). Relationship lines use clean orthogonal (right-angle) routing.
 
-Click the relationship line to select it. The **Properties** panel opens on the right. Set cardinality, optionality, and verb labels for the source end and the target end independently.
+### 4. Configure relationships
+
+Click the relationship line to select it. The **Properties** panel opens on the right side. For each end (source and target) you can configure:
+
+- **Cardinality:** `one` or `many`. The "many" end displays a crow's foot symbol.
+- **Optionality:** `mandatory` (solid line) or `optional` (dashed line). The two halves of a relationship line are styled independently.
+- **Verb label:** descriptive text placed along the line (e.g. "owns", "belongs to"). Click the label to flip it to the opposite side of the line.
+- **UID bar:** tick mark indicating weak entity identification (FK-as-PK).
 
 Common configurations:
 
@@ -134,9 +152,31 @@ Common configurations:
 | Customer may optionally have a profile | one / optional | one / mandatory |
 | Technician optionally supervises others | one / optional | many / optional |
 
-### 5. Export
+### 5. Copy and paste entities
 
-Use the buttons in the top-right corner. For sharing a diagram image, **Export PNG** produces a clean white-background file cropped to your diagram. For database implementation, **Export SQL** generates ready-to-use DDL statements.
+Select one or more entities, then press **Ctrl/Cmd+C** to copy. Press **Ctrl/Cmd+V** to paste. Pasted entities appear to the right of their originals, avoiding overlap with existing entities. All attributes (including data type hints) are preserved; relationships are not copied.
+
+### 6. Lock the viewport
+
+Click the **Lock** button (bottom-right, above Undo). When locked, the canvas ignores pan, zoom, select, and drag interactions — useful for preventing accidental edits during presentations or review. The button text changes to **Locked**; click again to unlock.
+
+### 7. Export your work
+
+Use the top-right toolbar buttons:
+
+- **Save JSON:** download the full diagram as a `.json` file for later editing or sharing.
+- **Load JSON:** restore a previously saved diagram from a file.
+- **Export PNG:** download a white-background image cropped tightly to your diagram content.
+- **Export SVG:** download a scalable vector version, also cropped to content.
+- **Export SQL:** generate `CREATE DATABASE` / `USE` header followed by `CREATE TABLE` DDL statements. Tables are sorted with independent tables (no foreign keys) before dependent ones. Attribute data types follow your manual overrides when set.
+
+### 8. Undo / Redo
+
+Click **Undo** / **Redo** (bottom-right) or use keyboard shortcuts: **Ctrl/Cmd+Z** (undo) and **Ctrl/Cmd+Shift+Z** or **Ctrl/Cmd+Y** (redo).
+
+### 9. Pan, zoom, and snap
+
+**Pan** by dragging on empty canvas space. **Zoom** with the scroll wheel or the bottom-left zoom buttons. The **fit-to-view** button (bottom-left, third from top) automatically adjusts zoom to show all entities. When dragging an entity near the center alignment of another, a blue snap guide appears.
 
 ---
 
@@ -144,11 +184,13 @@ Use the buttons in the top-right corner. For sharing a diagram image, **Export P
 
 | Key | Action |
 |---|---|
-| `Delete` / `Backspace` | Delete selected entity, relationship, or exclusive arc |
-| `Escape` | Deselect all / cancel editing |
-| `Ctrl/Cmd + A` | Select all entities |
+| `Ctrl/Cmd + C` | Copy selected entity (or entities) |
+| `Ctrl/Cmd + V` | Paste copied entities |
 | `Ctrl/Cmd + Z` | Undo |
 | `Ctrl/Cmd + Shift + Z` | Redo |
+| `Ctrl/Cmd + A` | Select all entities |
+| `Delete` / `Backspace` | Delete selected entity, relationship, or arc |
+| `Escape` | Deselect all / cancel editing |
 | `Enter` (while editing attribute name) | Confirm and jump to next new attribute row |
 | `Backspace` (on empty attribute name) | Delete the attribute |
 
