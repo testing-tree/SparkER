@@ -22,6 +22,16 @@ body,
   align-items: center;
 }
 
+/* Hide the built-in lock button — custom lock is in the Undo/Redo panel */
+.react-flow__controls-button:nth-child(4) {
+  display: none;
+}
+
+/* Align left panel top with right panel at 110px from viewport bottom */
+.react-flow__panel.bottom.left {
+  margin-bottom: 23px !important;
+}
+
 /* Show handles when hovering their parent node.
    !important is needed to override React Flow's inline opacity:0 fallback. */
 .react-flow__node:hover .react-flow__handle {

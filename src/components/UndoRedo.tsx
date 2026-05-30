@@ -1,26 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Panel } from '@xyflow/react'
+import { Panel, useStore, useStoreApi } from '@xyflow/react'
 import { useDiagramStore, useUndoRedo } from '../store/diagramStore'
 import PrivacyModal from './PrivacyModal'
 
-const BTN = 'w-full px-4 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-left disabled:opacity-40 disabled:cursor-not-allowed'
+const BTN = 'w-[82px] px-4 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 cursor-pointer text-center disabled:opacity-40 disabled:cursor-not-allowed'
 
 export default function UndoRedo() {
   const canUndo = useUndoRedo(s => s.pastStates.length > 0)
   const canRedo = useUndoRedo(s => s.futureStates.length > 0)
-  const [minW, setMinW]               = useState<number | undefined>(undefined)
+  const locked = useStore(s => !(s.nodesDraggable ?? true))
+  const api = useStoreApi()
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [attributionEl, setAttributionEl] = useState<Element | null>(null)
-  const panelRef                      = useRef<HTMLDivElement>(null)
-
-  useLayoutEffect(() => {
-    if (!panelRef.current) return
-    const btns = panelRef.current.querySelectorAll<HTMLElement>('button')
-    let max = 0
-    btns.forEach(btn => { if (btn.offsetWidth > max) max = btn.offsetWidth })
-    if (max > 0) setMinW(max)
-  }, [])
 
   useEffect(() => {
     const el = document.querySelector('.react-flow__attribution')
@@ -47,13 +39,20 @@ export default function UndoRedo() {
 
   return (
     <>
-      <Panel position="bottom-right" style={{ marginBottom: '76px' }}>
-        <div ref={panelRef} className="flex flex-col gap-1" style={{ width: 'max-content', minWidth: minW }}>
-          <button className={BTN} style={{ minWidth: minW }} disabled={!canUndo}
+      <Panel position="bottom-right" style={{ marginBottom: '18px' }}>
+        <div className="flex flex-col gap-1">
+          <button className={BTN}
+            onClick={() => {
+              const next = !api.getState().nodesDraggable
+              api.setState({ nodesDraggable: next, nodesConnectable: next, elementsSelectable: next })
+            }}>
+            {locked ? 'Locked' : 'Lock'}
+          </button>
+          <button className={BTN} disabled={!canUndo}
             onClick={() => useDiagramStore.temporal.getState().undo()}>
             Undo
           </button>
-          <button className={BTN} style={{ minWidth: minW }} disabled={!canRedo}
+          <button className={BTN} disabled={!canRedo}
             onClick={() => useDiagramStore.temporal.getState().redo()}>
             Redo
           </button>
