@@ -23,13 +23,6 @@ export default function UndoRedo() {
   }, [])
 
   useEffect(() => {
-    if (!localStorage.getItem('sparker_privacy_seen')) {
-      setShowPrivacy(true)
-      localStorage.setItem('sparker_privacy_seen', '1')
-    }
-  }, [])
-
-  useEffect(() => {
     const el = document.querySelector('.react-flow__attribution')
     if (el) setAttributionEl(el)
   }, [])
@@ -54,7 +47,7 @@ export default function UndoRedo() {
 
   return (
     <>
-      <Panel position="bottom-right" style={{ marginBottom: '50px' }}>
+      <Panel position="bottom-right" style={{ marginBottom: '76px' }}>
         <div ref={panelRef} className="flex flex-col gap-1" style={{ width: 'max-content', minWidth: minW }}>
           <button className={BTN} style={{ minWidth: minW }} disabled={!canUndo}
             onClick={() => useDiagramStore.temporal.getState().undo()}>

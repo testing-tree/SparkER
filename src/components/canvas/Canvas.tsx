@@ -3,6 +3,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  ControlButton,
   ConnectionMode,
   useNodesState,
   useEdgesState,
@@ -24,6 +25,8 @@ import Toolbar from '../Toolbar'
 import UndoRedo from '../UndoRedo'
 import SnapGuides from './SnapGuides'
 import ArcOverlay from './ArcOverlay'
+import ClipboardHandler, { pasteEntities } from './ClipboardHandler'
+import WelcomeModal from '../WelcomeModal'
 import type { Entity, Relationship } from '../../types/diagram'
 
 const nodeTypes = { entityNode: EntityNode }
@@ -86,9 +89,12 @@ export default function Canvas() {
   )
 
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({})
+  const [showHelp, setShowHelp] = useState(false)
+  const [showAbout, setShowAbout] = useState(() => !localStorage.getItem('sparker_about_seen'))
   const guidesRef = useRef<{ x?: number; y?: number }>({})
   const nodesRef = useRef(nodes)
   nodesRef.current = nodes
+  const clipboardRef = useRef<Entity[]>([])
   const connectStartNodeId = useRef<string | null>(null)
 
   // Sync store entities → RF nodes: add new ones AND update positions / parentId (enables undo sync).
@@ -157,18 +163,38 @@ export default function Canvas() {
   // Skip if snap is active — onNodeDragStop will write the snapped position instead.
   const handleNodesChange = useCallback((changes: NodeChange<Node<EntityNodeData>>[]) => {
     onNodesChange(changes)
-    changes.forEach(change => {
-      if (change.type === 'position' && change.position && change.dragging === false) {
-        const g = guidesRef.current
-        if (g.x === undefined && g.y === undefined) {
-          const clamped = clampPosition(change.id, change.position)
-          updateEntity(change.id, { position: clamped })
-          if (clamped.x !== change.position.x || clamped.y !== change.position.y) {
-            setNodes(prev => prev.map(n => n.id === change.id ? { ...n, position: clamped } : n))
-          }
+    // Collect all position changes with dragging===false
+    const writes: { id: string; x: number; y: number }[] = []
+    const g = guidesRef.current
+    if (g.x === undefined && g.y === undefined) {
+      for (const c of changes) {
+        if (c.type === 'position' && c.position && c.dragging === false) {
+          const multiDrag = changes.filter(
+            d => d.type === 'position' && d.dragging === false
+          ).length > 1
+          const pos = multiDrag ? c.position : clampPosition(c.id, c.position)
+          writes.push({ id: c.id, x: pos.x, y: pos.y })
         }
       }
-    })
+    }
+
+    if (writes.length === 0) return
+
+    // Batch-write all positions atomically to avoid sync useEffect firing
+    // between individual writes and snapping other nodes back.
+    const entities = writes.length > 1
+      ? useDiagramStore.getState().diagram.entities.map(e => {
+          const w = writes.find(wr => wr.id === e.id)
+          return w ? { ...e, position: { x: w.x, y: w.y } } : e
+        })
+      : undefined
+
+    if (entities) {
+      useDiagramStore.setState(s => ({ diagram: { ...s.diagram, entities } }))
+    } else {
+      const w = writes[0]
+      updateEntity(w.id, { position: { x: w.x, y: w.y } })
+    }
   }, [onNodesChange, updateEntity, setNodes, clampPosition])
 
   // Record the drag-start node so onConnect can normalize source/target.
@@ -228,13 +254,18 @@ export default function Canvas() {
       if (Math.abs(dCy - cy) < SNAP_THRESHOLD) newGuides.y = cy
     })
 
-    // Enforce protection zone
-    const clamped = clampPosition(draggedNode.id, draggedNode.position)
-    const blocked = clamped.x !== draggedNode.position.x || clamped.y !== draggedNode.position.y
+    // Enforce protection zone (skip during multi-select drag — positions of other
+    // dragged nodes aren't reflected in nodesRef yet, causing desync)
+    let blocked = false
+    let clamped = draggedNode.position
+    if (selection.entityIds.length <= 1) {
+      clamped = clampPosition(draggedNode.id, draggedNode.position)
+      blocked = clamped.x !== draggedNode.position.x || clamped.y !== draggedNode.position.y
+    }
 
     if (blocked) {
-      guidesRef.current = {}
-      setGuides({})
+      guidesRef.current = newGuides
+      setGuides(newGuides)
       setNodes(prev => prev.map(n => {
         if (n.id === draggedNode.id) return { ...n, position: clamped, data: { ...n.data, tooClose: true } }
         if (n.data?.tooClose) return { ...n, data: { ...n.data, tooClose: false } }
@@ -313,6 +344,13 @@ export default function Canvas() {
         e.preventDefault()
         selection.arcIds.forEach(id => deleteArcAction(id))
         setSelection({ arcIds: [] })
+      } else if (mod && e.key === 'c' && useDiagramStore.getState().selection.entityIds.length >= 1) {
+        e.preventDefault()
+        const state = useDiagramStore.getState()
+        clipboardRef.current = state.diagram.entities.filter(en => state.selection.entityIds.includes(en.id))
+      } else if (mod && e.key === 'v' && clipboardRef.current.length > 0) {
+        e.preventDefault()
+        pasteEntities(clipboardRef.current)
       }
       // Delete/Backspace for RF nodes/edges: handled by ReactFlow deleteKeyCode prop
       // Ctrl+Z / Ctrl+Shift+Z: handled by UndoRedo.tsx
@@ -341,11 +379,60 @@ export default function Canvas() {
       fitView
     >
       <Background />
-      <Controls />
+      <Controls>
+        <ControlButton onClick={() => setShowHelp(true)} title="Help">
+          <span style={{ fontSize: 14, fontWeight: 'bold', lineHeight: 1 }}>?</span>
+        </ControlButton>
+      </Controls>
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowHelp(false) }}>
+          <div className="bg-white rounded-lg shadow-xl p-6" style={{ width: 440, maxHeight: '80vh', overflow: 'auto' }}>
+            <div className="flex items-start justify-between mb-4">
+              <p className="text-sm font-semibold text-gray-800">Help &amp; Tips</p>
+              <button onClick={() => setShowHelp(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none cursor-pointer">&times;</button>
+            </div>
+            <div className="text-xs text-gray-600 space-y-3 leading-relaxed">
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Entities</p>
+                <p>Click <b>Add Entity</b> (top-left toolbar) or the canvas to create. <b>Double-click</b> the name to rename. <b>Select</b> an entity to reveal <b>up/down arrows</b> (left) to reorder attributes, and <b>data type tags</b> (right) — click a tag to cycle through INT, VARCHAR(255), DATE, etc.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Attributes</p>
+                <p>Select an entity and click <b>Add Attribute</b> (top-left). Click the <b>#/*/o</b> prefix to cycle identifier (primary key) / required (NOT NULL) / optional (nullable). Click the name to edit; press <b>Enter</b> to confirm and jump to a new row.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Relationships</p>
+                <p>Hover over an entity to reveal four blue <b>handles</b>. <b>Drag</b> from any handle to another entity. Click the line to configure cardinality and optionality in the right-side <b>Properties</b> panel. Click any <b>verb label</b> to flip it to the opposite side of the line.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Canvas</p>
+                <p><b>Pan</b> by dragging empty space. <b>Zoom</b> with scroll wheel or bottom-left controls. Entity boxes maintain a 60px clearance from each other (an orange ring warns when too close).</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Keyboard shortcuts</p>
+                <p><b>Ctrl/Cmd+Z</b> undo · <b>Ctrl/Cmd+Shift+Z</b> redo · <b>Ctrl/Cmd+A</b> select all · <b>Ctrl/Cmd+C</b> copy selected entity · <b>Ctrl/Cmd+V</b> paste · <b>Delete/Backspace</b> remove selection · <b>Escape</b> deselect all</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Export</p>
+                <p>Top-right toolbar: <b>Save JSON</b> to preserve your work, <b>Load JSON</b> to restore, <b>Export PNG/SVG</b> for images, and <b>Export SQL</b> for DDL statements.</p>
+              </div>
+            </div>
+            <hr className="my-3 border-gray-200" />
+            <p className="text-xs text-gray-400">
+              For complete documentation, see the{' '}
+              <a href="https://github.com/testing-tree/SparkER#readme" target="_blank" rel="noopener noreferrer"
+                className="underline hover:text-gray-600">README on GitHub</a>.
+            </p>
+          </div>
+        </div>
+      )}
+      {showAbout && <WelcomeModal onClose={() => setShowAbout(false)} />}
       <Toolbar />
       <UndoRedo />
       <SnapGuides guides={guides} />
       <ArcOverlay />
+          <ClipboardHandler />
     </ReactFlow>
   )
 }
