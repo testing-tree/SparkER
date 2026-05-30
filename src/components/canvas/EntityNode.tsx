@@ -21,7 +21,7 @@ const DATA_TYPES = [undefined, 'INT', 'VARCHAR(255)', 'TEXT', 'DATE', 'BOOLEAN',
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
-export type EntityNodeData = { entityId: string }
+export type EntityNodeData = { entityId: string; tooClose?: boolean }
 
 // ── Handle styles — center each dot precisely on its border edge ──────────────
 
@@ -97,7 +97,7 @@ function separatorY(attrCount: number): number {
 
 export default function EntityNode({ id, data, selected }: NodeProps) {
   const entityId = (data as EntityNodeData).entityId
-  const isWarned = !!(data as Record<string, unknown>).tooClose
+  const isWarned = !!(data as EntityNodeData).tooClose
 
   const updateNodeInternals = useUpdateNodeInternals()
   const { fitView } = useReactFlow()

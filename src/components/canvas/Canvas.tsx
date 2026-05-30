@@ -89,7 +89,6 @@ export default function Canvas() {
   const guidesRef = useRef<{ x?: number; y?: number }>({})
   const nodesRef = useRef(nodes)
   nodesRef.current = nodes
-  const [warnedNodeId, setWarnedNodeId] = useState<string | null>(null)
   const connectStartNodeId = useRef<string | null>(null)
 
   // Sync store entities → RF nodes: add new ones AND update positions / parentId (enables undo sync).
@@ -234,7 +233,6 @@ export default function Canvas() {
     const blocked = clamped.x !== draggedNode.position.x || clamped.y !== draggedNode.position.y
 
     if (blocked) {
-      setWarnedNodeId(draggedNode.id)
       guidesRef.current = {}
       setGuides({})
       setNodes(prev => prev.map(n => {
@@ -243,7 +241,6 @@ export default function Canvas() {
         return n
       }))
     } else {
-      setWarnedNodeId(null)
       guidesRef.current = newGuides
       setGuides(newGuides)
       setNodes(prev => {
@@ -256,7 +253,6 @@ export default function Canvas() {
 
   // Apply snap and write final position to store (creates undo entry when snap occurs).
   const onNodeDragStop: OnNodeDrag = useCallback((_evt, node) => {
-    setWarnedNodeId(null)
     setNodes(prev => {
       const hasClose = prev.some(n => n.data?.tooClose)
       if (!hasClose) return prev
