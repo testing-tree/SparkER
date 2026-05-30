@@ -8,23 +8,43 @@ export function getBestSides(srcNode: Node, tgtNode: Node): { srcPos: Position; 
   const tw = tgtNode.measured?.width  ?? 150
   const th = tgtNode.measured?.height ?? 100
 
-  const srcCx = srcNode.position.x + sw / 2
-  const srcCy = srcNode.position.y + sh / 2
-  const tgtCx = tgtNode.position.x + tw / 2
-  const tgtCy = tgtNode.position.y + th / 2
+  const sx = srcNode.position.x
+  const sy = srcNode.position.y
+  const tx = tgtNode.position.x
+  const ty = tgtNode.position.y
 
-  const dx = tgtCx - srcCx
-  const dy = tgtCy - srcCy
-
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx >= 0
-      ? { srcPos: Position.Right,  tgtPos: Position.Left }
-      : { srcPos: Position.Left,   tgtPos: Position.Right }
-  } else {
-    return dy >= 0
-      ? { srcPos: Position.Bottom, tgtPos: Position.Top }
-      : { srcPos: Position.Top,    tgtPos: Position.Bottom }
+  // ARM endpoint for a given side (center of side as proxy for handle position).
+  function arm(pos: Position, x: number, y: number, w: number, h: number): [number, number] {
+    switch (pos) {
+      case Position.Right:  return [x + w + ARM_LENGTH, y + h / 2]
+      case Position.Left:   return [x - ARM_LENGTH,     y + h / 2]
+      case Position.Bottom: return [x + w / 2,          y + h + ARM_LENGTH]
+      case Position.Top:    return [x + w / 2,          y - ARM_LENGTH]
+    }
   }
+
+  // Compute orthogonal path distance for a side pair: |taX - saX| + |taY - saY|
+  function dist(srcPos: Position, tgtPos: Position): number {
+    const [saX, saY] = arm(srcPos, sx, sy, sw, sh)
+    const [taX, taY] = arm(tgtPos, tx, ty, tw, th)
+    return Math.abs(taX - saX) + Math.abs(taY - saY)
+  }
+
+  const sides: Position[] = [Position.Right, Position.Left, Position.Top, Position.Bottom]
+  let best: { srcPos: Position; tgtPos: Position } | null = null
+  let bestDist = Infinity
+
+  for (const srcPos of sides) {
+    for (const tgtPos of sides) {
+      const d = dist(srcPos, tgtPos)
+      if (d < bestDist) {
+        bestDist = d
+        best = { srcPos, tgtPos }
+      }
+    }
+  }
+
+  return best!
 }
 
 export function getHandleXYDistributed(node: Node, pos: Position, fraction: number): [number, number] {

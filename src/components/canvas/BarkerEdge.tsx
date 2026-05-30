@@ -282,12 +282,45 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
 
   const [saX, saY] = armEnd(sx, sy, srcPos)
   const [taX, taY] = armEnd(tx, ty, tgtPos)
-  const midX = (saX + taX) / 2
-  const midY = (saY + taY) / 2
 
-  const fullPath   = `M ${sx} ${sy} L ${saX} ${saY} L ${taX} ${taY} L ${tx} ${ty}`
-  const sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${midX} ${midY}`
-  const targetPath = `M ${midX} ${midY} L ${taX} ${taY} L ${tx} ${ty}`
+  // Pick routing order so the first post-ARM segment is perpendicular to the ARM,
+  // eliminating backtracking (U-turn) on the source side.
+  // Source horizontal (Left/Right): ARM is horizontal → go vertical first (V-H routing)
+  // Source vertical   (Top/Bottom): ARM is vertical   → go horizontal first (H-V routing)
+  const srcHorizontal = srcPos === Position.Left || srcPos === Position.Right
+  const hDist = Math.abs(taX - saX)
+  const vDist = Math.abs(taY - saY)
+  const half  = (hDist + vDist) / 2
+
+  let fullPath: string
+  let sourcePath: string
+  let targetPath: string
+
+  if (srcHorizontal) {
+    // V-H: vertical first to target ARM's Y, then horizontal to target ARM's X
+    fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+    if (vDist >= half) {
+      const sy2 = saY + Math.sign(taY - saY) * half
+      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${sy2}`
+      targetPath = `M ${saX} ${sy2} L ${saX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+    } else {
+      const sx2 = saX + Math.sign(taX - saX) * (half - vDist)
+      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${taY} L ${sx2} ${taY}`
+      targetPath = `M ${sx2} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+    }
+  } else {
+    // H-V: horizontal first to target ARM's X, then vertical to target ARM's Y
+    fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${taX} ${saY} L ${taX} ${taY} L ${tx} ${ty}`
+    if (hDist >= half) {
+      const sx2 = saX + Math.sign(taX - saX) * half
+      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${sx2} ${saY}`
+      targetPath = `M ${sx2} ${saY} L ${taX} ${saY} L ${taX} ${taY} L ${tx} ${ty}`
+    } else {
+      const sy2 = saY + Math.sign(taY - saY) * (half - hDist)
+      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${taX} ${saY} L ${taX} ${sy2}`
+      targetPath = `M ${taX} ${sy2} L ${taX} ${taY} L ${tx} ${ty}`
+    }
+  }
 
   const [slX, slY, slAnchor] = labelPos(sx, sy, srcPos, rel.sourceEnd.labelFlipped ?? false)
   const [tlX, tlY, tlAnchor] = labelPos(tx, ty, tgtPos, rel.targetEnd.labelFlipped ?? false)

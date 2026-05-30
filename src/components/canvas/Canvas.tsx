@@ -87,6 +87,9 @@ export default function Canvas() {
 
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({})
   const guidesRef = useRef<{ x?: number; y?: number }>({})
+  const nodesRef = useRef(nodes)
+  nodesRef.current = nodes
+  const [warnedNodeId, setWarnedNodeId] = useState<string | null>(null)
   const connectStartNodeId = useRef<string | null>(null)
 
   // Sync store entities → RF nodes: add new ones AND update positions / parentId (enables undo sync).
@@ -124,6 +127,33 @@ export default function Canvas() {
     })
   }, [diagram.relationships, setEdges])
 
+  // Clamp position to maintain protection zone against all other entities.
+  const clampPosition = useCallback((nodeId: string, pos: { x: number; y: number }): { x: number; y: number } => {
+    const cur = nodesRef.current
+    const node = cur.find(n => n.id === nodeId)
+    if (!node || node.parentId) return pos
+    const dw = node.measured?.width ?? 150
+    const dh = node.measured?.height ?? 100
+    let { x, y } = pos
+    for (const other of cur) {
+      if (other.id === nodeId || other.parentId) continue
+      const ow = other.measured?.width ?? 150
+      const oh = other.measured?.height ?? 100
+      const hGap = Math.max(other.position.x - (x + dw), x - (other.position.x + ow))
+      const vGap = Math.max(other.position.y - (y + dh), y - (other.position.y + oh))
+      if (hGap < PROTECTION && vGap < PROTECTION) {
+        const hNeed = PROTECTION - hGap
+        const vNeed = PROTECTION - vGap
+        if (hNeed <= vNeed) {
+          x += x + dw / 2 > other.position.x + ow / 2 ? hNeed : -hNeed
+        } else {
+          y += y + dh / 2 > other.position.y + oh / 2 ? vNeed : -vNeed
+        }
+      }
+    }
+    return { x, y }
+  }, [])
+
   // Wrap onNodesChange to write position to store at drag end (creates undo entry).
   // Skip if snap is active — onNodeDragStop will write the snapped position instead.
   const handleNodesChange = useCallback((changes: NodeChange<Node<EntityNodeData>>[]) => {
@@ -132,11 +162,15 @@ export default function Canvas() {
       if (change.type === 'position' && change.position && change.dragging === false) {
         const g = guidesRef.current
         if (g.x === undefined && g.y === undefined) {
-          updateEntity(change.id, { position: change.position })
+          const clamped = clampPosition(change.id, change.position)
+          updateEntity(change.id, { position: clamped })
+          if (clamped.x !== change.position.x || clamped.y !== change.position.y) {
+            setNodes(prev => prev.map(n => n.id === change.id ? { ...n, position: clamped } : n))
+          }
         }
       }
     })
-  }, [onNodesChange, updateEntity])
+  }, [onNodesChange, updateEntity, setNodes, clampPosition])
 
   // Record the drag-start node so onConnect can normalize source/target.
   // When a user grabs a "target"-type handle, ReactFlow inverts connection.source/target.
@@ -177,26 +211,57 @@ export default function Canvas() {
     })
   }, [addRelationship])
 
-  // Detect center alignment with other nodes during drag (skip sub-entities — their
-  // positions are relative to the parent and don't align with the absolute grid).
+  // Protection zone: minimum border-to-border distance between entities
+  const PROTECTION = 2 * 30 // 2 × ARM_LENGTH
+
+  // Detect center alignment and enforce minimum entity spacing during drag.
   const onNodeDrag: OnNodeDrag = useCallback((_evt, draggedNode) => {
     if (draggedNode.parentId) return
     const dCx = draggedNode.position.x + (draggedNode.measured?.width  ?? 150) / 2
     const dCy = draggedNode.position.y + (draggedNode.measured?.height ?? 100) / 2
     const newGuides: { x?: number; y?: number } = {}
-    nodes.forEach(node => {
+
+    nodesRef.current.forEach(node => {
       if (node.id === draggedNode.id || node.parentId) return
       const cx = node.position.x + (node.measured?.width  ?? 150) / 2
       const cy = node.position.y + (node.measured?.height ?? 100) / 2
       if (Math.abs(dCx - cx) < SNAP_THRESHOLD) newGuides.x = cx
       if (Math.abs(dCy - cy) < SNAP_THRESHOLD) newGuides.y = cy
     })
-    guidesRef.current = newGuides
-    setGuides(newGuides)
-  }, [nodes])
+
+    // Enforce protection zone
+    const clamped = clampPosition(draggedNode.id, draggedNode.position)
+    const blocked = clamped.x !== draggedNode.position.x || clamped.y !== draggedNode.position.y
+
+    if (blocked) {
+      setWarnedNodeId(draggedNode.id)
+      guidesRef.current = {}
+      setGuides({})
+      setNodes(prev => prev.map(n => {
+        if (n.id === draggedNode.id) return { ...n, position: clamped, data: { ...n.data, tooClose: true } }
+        if (n.data?.tooClose) return { ...n, data: { ...n.data, tooClose: false } }
+        return n
+      }))
+    } else {
+      setWarnedNodeId(null)
+      guidesRef.current = newGuides
+      setGuides(newGuides)
+      setNodes(prev => {
+        const hasClose = prev.some(n => n.data?.tooClose)
+        if (!hasClose) return prev
+        return prev.map(n => n.data?.tooClose ? { ...n, data: { ...n.data, tooClose: false } } : n)
+      })
+    }
+  }, [setNodes, clampPosition])
 
   // Apply snap and write final position to store (creates undo entry when snap occurs).
   const onNodeDragStop: OnNodeDrag = useCallback((_evt, node) => {
+    setWarnedNodeId(null)
+    setNodes(prev => {
+      const hasClose = prev.some(n => n.data?.tooClose)
+      if (!hasClose) return prev
+      return prev.map(n => n.data?.tooClose ? { ...n, data: { ...n.data, tooClose: false } } : n)
+    })
     if (!node.parentId) {
       const g = guidesRef.current
       if (g.x !== undefined || g.y !== undefined) {
@@ -205,13 +270,14 @@ export default function Canvas() {
         let { x, y } = node.position
         if (g.x !== undefined) x = g.x - w / 2
         if (g.y !== undefined) y = g.y - h / 2
-        setNodes(prev => prev.map(n => n.id === node.id ? { ...n, position: { x, y } } : n))
-        updateEntity(node.id, { position: { x, y } })
+        const clamped = clampPosition(node.id, { x, y })
+        setNodes(prev => prev.map(n => n.id === node.id ? { ...n, position: clamped } : n))
+        updateEntity(node.id, { position: clamped })
       }
     }
     guidesRef.current = {}
     setGuides({})
-  }, [updateEntity, setNodes])
+  }, [updateEntity, setNodes, clampPosition])
 
   const onNodesDelete: OnNodesDelete = useCallback(deleted => {
     deleted.forEach(n => deleteEntityAction(n.id))

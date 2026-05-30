@@ -97,6 +97,7 @@ function separatorY(attrCount: number): number {
 
 export default function EntityNode({ id, data, selected }: NodeProps) {
   const entityId = (data as EntityNodeData).entityId
+  const isWarned = !!(data as Record<string, unknown>).tooClose
 
   const updateNodeInternals = useUpdateNodeInternals()
   const { fitView } = useReactFlow()
@@ -226,7 +227,9 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   return (
     <div
       className={`relative rounded-lg border-2 bg-white shadow-sm select-none ${
-        selected
+        isWarned
+          ? 'border-orange-400 ring-2 ring-orange-400'
+          : selected
           ? 'border-blue-400 ring-2 ring-blue-400'
           : isSubEntity
             ? 'border-gray-500'
