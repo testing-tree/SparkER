@@ -56,11 +56,14 @@ Click the **Privacy** button in the app for full details and instructions on how
 
 ### Relationships
 - Drag from any of an entity's four connection handles to create a relationship
-- Relationships route with clean 3-segment lines, automatic side selection, and **distributed connection points** (multiple lines entering or exiting the same entity side are spread evenly, never stacked)
+- Relationships route with clean right-angle lines, automatic side selection with U-turn avoidance, and **distributed connection points** (multiple lines entering or exiting the same entity side are spread evenly, never stacked)
 - Configure per-end properties in the Properties panel: cardinality (one / many), optionality (mandatory / optional), verb label, and UID bar
 - Optional ends render as dashed lines; the two halves of a relationship line are styled independently (half-dashed, half-solid)
 - Crow's foot symbol on the "many" end; UID bar tick mark for weak entity identification
 - Verb labels default to alternating sides of the line for cleaner readability; click any label to flip it to the opposite side
+- **Manual side selection:** select a relationship to reveal connection dots on each connected entity. Click any dot to route the line through that side of the entity box. The Properties panel shows the current side; click it to restore auto-routing
+- **Draggable waypoints:** when a side has been manually chosen, a draggable handle appears at the line bend. Drag it to reposition; on release it snaps to the nearest valid orthogonal corner. Double-click the handle to clear the waypoint and return to auto-routing
+- ⚠️ Manual side selection and waypoint dragging give you full control over line layout, but may produce routings that the auto mode would avoid (e.g. visually awkward paths). Adjust manually or restore auto-routing if needed
 
 ### Recursive Loops
 - Add a recursive relationship to any entity via the **Recursive** button
@@ -143,6 +146,9 @@ Click the relationship line to select it. The **Properties** panel opens on the 
 - **Optionality:** `mandatory` (solid line) or `optional` (dashed line). The two halves of a relationship line are styled independently.
 - **Verb label:** descriptive text placed along the line (e.g. "owns", "belongs to"). Click the label to flip it to the opposite side of the line.
 - **UID bar:** tick mark indicating weak entity identification (FK-as-PK).
+- **Side:** which side of the entity box the line connects to. By default, the side is chosen automatically. To override, click one of the connection dots that appear on the entity boxes when a relationship is selected. Click the side name in the Properties panel to restore automatic selection.
+
+**Dragging a waypoint:** after manually choosing a side, a draggable circle appears at the line bend. Drag it to reposition the corner; on release it snaps to the nearest right-angle position. Double-click the handle to clear the waypoint. Note that manual adjustment may produce layouts the automatic routing would avoid; adjust as needed.
 
 Common configurations:
 

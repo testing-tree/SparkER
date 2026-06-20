@@ -14,20 +14,23 @@ function Toggle({
   options,
   value,
   onChange,
+  titles,
 }: {
   label: string
   options: [string, string]
   value: string
   onChange: (v: string) => void
+  titles?: [string, string]
 }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-gray-500 w-20 shrink-0">{label}</span>
       <div className="flex rounded border border-gray-300 overflow-hidden text-xs">
-        {options.map(opt => (
+        {options.map((opt, i) => (
           <button
             key={opt}
             onClick={() => onChange(opt)}
+            title={titles?.[i]}
             className={[
               'px-2 py-0.5 cursor-pointer',
               value === opt
@@ -72,12 +75,14 @@ function EndSection({
       <Toggle
         label="Cardinality"
         options={['one', 'many']}
+        titles={['Single entity', 'Multiple entities (crow\'s foot)']}
         value={end.cardinality}
         onChange={v => updateRelationshipEnd(relId, endKey, { cardinality: v as 'one' | 'many' })}
       />
       <Toggle
         label="Optionality"
         options={['mandatory', 'optional']}
+        titles={['Required (solid line)', 'Optional (dashed line)']}
         value={end.optionality}
         onChange={v => updateRelationshipEnd(relId, endKey, { optionality: v as 'mandatory' | 'optional' })}
       />
@@ -90,6 +95,7 @@ function EndSection({
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitLabel() } }}
           className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-2 py-0.5 outline-none focus:border-gray-500"
           placeholder="(none)"
+          title="Relationship verb label"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -99,7 +105,23 @@ function EndSection({
           checked={end.uidBar}
           onChange={e => updateRelationshipEnd(relId, endKey, { uidBar: e.target.checked })}
           className="cursor-pointer"
+          title="Weak entity identification bar"
         />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 w-20 shrink-0">Side</span>
+        {end.preferredSide ? (
+          <button
+            onClick={() => updateRelationshipEnd(relId, endKey, { preferredSide: undefined })}
+            className="px-2 py-0.5 bg-white text-gray-600 hover:bg-gray-50 cursor-pointer border border-gray-300 rounded text-xs"
+            title="Click to restore auto-routing"
+          >{end.preferredSide}</button>
+        ) : (
+          <button
+            className="px-2 py-0.5 bg-gray-800 text-white cursor-pointer border border-gray-800 rounded text-xs"
+            title="Click a side dot on the entity box"
+          >auto</button>
+        )}
       </div>
     </div>
   )
@@ -115,6 +137,7 @@ function LabelInput({
   value: string
   onChange: (v: string) => void
   onCommit: () => void
+  title?: string
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -126,6 +149,7 @@ function LabelInput({
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onCommit() } }}
         className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-2 py-0.5 outline-none focus:border-gray-500"
         placeholder="(none)"
+        title={title}
       />
     </div>
   )
@@ -153,18 +177,21 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
       <Toggle
         label="Cardinality"
         options={['one', 'many']}
+        titles={['Single entity', 'Multiple entities (crow\'s foot)']}
         value={rel.targetEnd.cardinality}
         onChange={v => updateRelationshipEnd(rel.id, 'target', { cardinality: v as 'one' | 'many' })}
       />
       <Toggle
         label="Exit opt."
         options={['mandatory', 'optional']}
+        titles={['Required exit (solid)', 'Optional exit (dashed)']}
         value={rel.sourceEnd.optionality}
         onChange={v => updateRelationshipEnd(rel.id, 'source', { optionality: v as 'mandatory' | 'optional' })}
       />
       <Toggle
         label="Entry opt."
         options={['mandatory', 'optional']}
+        titles={['Required entry (solid)', 'Optional entry (dashed)']}
         value={rel.targetEnd.optionality}
         onChange={v => updateRelationshipEnd(rel.id, 'target', { optionality: v as 'mandatory' | 'optional' })}
       />
@@ -177,8 +204,8 @@ function SelfRefSection({ rel }: { rel: Relationship }) {
           className="cursor-pointer"
         />
       </div>
-      <LabelInput label="Exit label"  value={exitLabel}  onChange={setExitLabel}  onCommit={commitExit} />
-      <LabelInput label="Entry label" value={entryLabel} onChange={setEntryLabel} onCommit={commitEntry} />
+      <LabelInput label="Exit label"  value={exitLabel}  onChange={setExitLabel}  onCommit={commitExit}  title="Verb label on the exit side" />
+      <LabelInput label="Entry label" value={entryLabel} onChange={setEntryLabel} onCommit={commitEntry} title="Verb label on the entry side" />
     </div>
   )
 }
@@ -257,6 +284,7 @@ export default function PropertyPanel() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</p>
               <button
                 className={ACT_BTN}
+                title="Add a self-referencing relationship"
                 onClick={() => addRelationship({
                   sourceEntityId: entity.id,
                   targetEntityId: entity.id,
@@ -268,6 +296,7 @@ export default function PropertyPanel() {
               </button>
               <button
                 className={ACT_BTN}
+                title="Create an intersection entity for many-to-many"
                 onClick={() => {
                   const name = window.prompt('Intersection entity name:')
                   if (!name?.trim()) return
@@ -337,6 +366,7 @@ export default function PropertyPanel() {
             </div>
             <button
               className={DEL_BTN}
+              title="Remove this exclusive arc constraint"
               onClick={() => {
                 deleteArc(arc.id)
                 setSelection({ arcIds: [] })

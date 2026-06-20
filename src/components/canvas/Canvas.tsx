@@ -133,6 +133,7 @@ export default function Canvas() {
   }, [diagram.relationships, setEdges])
 
   // Clamp position to maintain protection zone against all other entities.
+  // Iterates until stable — a push away from one entity must not enter another's zone.
   const clampPosition = useCallback((nodeId: string, pos: { x: number; y: number }): { x: number; y: number } => {
     const cur = nodesRef.current
     const node = cur.find(n => n.id === nodeId)
@@ -140,19 +141,26 @@ export default function Canvas() {
     const dw = node.measured?.width ?? 150
     const dh = node.measured?.height ?? 100
     let { x, y } = pos
-    for (const other of cur) {
-      if (other.id === nodeId || other.parentId) continue
-      const ow = other.measured?.width ?? 150
-      const oh = other.measured?.height ?? 100
-      const hGap = Math.max(other.position.x - (x + dw), x - (other.position.x + ow))
-      const vGap = Math.max(other.position.y - (y + dh), y - (other.position.y + oh))
-      if (hGap < PROTECTION && vGap < PROTECTION) {
-        const hNeed = PROTECTION - hGap
-        const vNeed = PROTECTION - vGap
-        if (hNeed <= vNeed) {
-          x += x + dw / 2 > other.position.x + ow / 2 ? hNeed : -hNeed
-        } else {
-          y += y + dh / 2 > other.position.y + oh / 2 ? vNeed : -vNeed
+    let moved = true
+    let iter = 0
+    while (moved && iter < 10) {
+      moved = false
+      iter++
+      for (const other of cur) {
+        if (other.id === nodeId || other.parentId) continue
+        const ow = other.measured?.width ?? 150
+        const oh = other.measured?.height ?? 100
+        const hGap = Math.max(other.position.x - (x + dw), x - (other.position.x + ow))
+        const vGap = Math.max(other.position.y - (y + dh), y - (other.position.y + oh))
+        if (hGap < PROTECTION && vGap < PROTECTION) {
+          const hNeed = PROTECTION - hGap
+          const vNeed = PROTECTION - vGap
+          if (hNeed <= vNeed) {
+            x += x + dw / 2 > other.position.x + ow / 2 ? hNeed : -hNeed
+          } else {
+            y += y + dh / 2 > other.position.y + oh / 2 ? vNeed : -vNeed
+          }
+          moved = true
         }
       }
     }
@@ -258,7 +266,8 @@ export default function Canvas() {
     // dragged nodes aren't reflected in nodesRef yet, causing desync)
     let blocked = false
     let clamped = draggedNode.position
-    if (selection.entityIds.length <= 1) {
+    const selCount = useDiagramStore.getState().selection.entityIds.length
+    if (selCount <= 1) {
       clamped = clampPosition(draggedNode.id, draggedNode.position)
       blocked = clamped.x !== draggedNode.position.x || clamped.y !== draggedNode.position.y
     }
@@ -377,6 +386,7 @@ export default function Canvas() {
       connectionMode={ConnectionMode.Loose}
       deleteKeyCode={['Delete', 'Backspace']}
       fitView
+      fitViewOptions={{ padding: 0.3 }}
     >
       <Background />
       <Controls>
@@ -387,12 +397,15 @@ export default function Canvas() {
       {showHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowHelp(false) }}>
-          <div className="bg-white rounded-lg shadow-xl p-6" style={{ width: 440, maxHeight: '80vh', overflow: 'auto' }}>
+          <div className="bg-white rounded-lg shadow-xl p-6" style={{ width: 520, maxHeight: '80vh', overflow: 'auto' }}>
             <div className="flex items-start justify-between mb-4">
               <p className="text-sm font-semibold text-gray-800">Help &amp; Tips</p>
               <button onClick={() => setShowHelp(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none cursor-pointer">&times;</button>
             </div>
             <div className="text-xs text-gray-600 space-y-3 leading-relaxed">
+              <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 leading-snug">
+                Hover over any control — attribute prefixes (<b>#</b>, <b>*</b>, <b>o</b>), side connection dots, buttons, checkboxes — for a brief explanation.
+              </div>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Entities</p>
                 <p>Click <b>Add Entity</b> (top-left toolbar) or the canvas to create. <b>Double-click</b> the name to rename. <b>Select</b> an entity to reveal <b>up/down arrows</b> (left) to reorder attributes, and <b>data type tags</b> (right) — click a tag to cycle through INT, VARCHAR(255), DATE, etc.</p>
@@ -404,6 +417,10 @@ export default function Canvas() {
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Relationships</p>
                 <p>Hover over an entity to reveal four blue <b>handles</b>. <b>Drag</b> from any handle to another entity. Click the line to configure cardinality and optionality in the right-side <b>Properties</b> panel. Click any <b>verb label</b> to flip it to the opposite side of the line.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 mb-1">Side selection</p>
+                <p>Select a relationship to show connection dots on each connected entity. <b>Click a dot</b> to route the line through that side. Click the side name in the Properties panel to restore auto-routing.</p>
               </div>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Canvas</p>

@@ -61,6 +61,7 @@ export interface RelationshipEnd {
   label: string;                         // verb, required by Barker spec
   uidBar: boolean;                       // UID bar for weak entity identification
   labelFlipped?: boolean;               // true = render label on opposite side of ARM
+  preferredSide?: 'top' | 'right' | 'bottom' | 'left';  // manual entry/exit side override (auto when unset)
 }
 
 // ============================================================

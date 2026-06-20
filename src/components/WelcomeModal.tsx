@@ -26,7 +26,7 @@ export default function WelcomeModal({ onClose }: { onClose: () => void }) {
           {/* ── About ── */}
           <div className="space-y-2 text-gray-600">
             <p>SparkER was created by CD at the Ivey Business School.</p>
-            <p>Press the <b>?</b> button (bottom-left) anytime for tips. Full documentation is on{' '}
+            <p>Hover over any control for a brief explanation. Press the <b>?</b> button (bottom-left) for all tips. Full docs on{' '}
               <a href="https://github.com/testing-tree/SparkER#readme" target="_blank" rel="noopener noreferrer"
                 className="underline hover:text-gray-600">GitHub</a>.
             </p>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useReactFlow, useEdges, useInternalNode, Position, type EdgeProps, type Node } from '@xyflow/react'
 import { useDiagramStore } from '../../store/diagramStore'
 import { getBestSides, getHandleXYDistributed, armEnd, getDistributedFraction } from './edgeGeometry'
@@ -35,10 +36,10 @@ function uidBarPath(ex: number, ey: number, pos: Position): string {
 }
 
 function labelPos(ex: number, ey: number, pos: Position, flipped = false): [number, number, string] {
-  if (pos === Position.Right)  return [ex + 16, flipped ? ey + 14 : ey - 10, 'start']
-  if (pos === Position.Left)   return [ex - 16, flipped ? ey + 14 : ey - 10, 'end']
-  if (pos === Position.Top)    return [flipped ? ex - 8 : ex + 8, ey - 16, flipped ? 'end' : 'start']
-  return                              [flipped ? ex - 8 : ex + 8, ey + 16, flipped ? 'end' : 'start']
+  if (pos === Position.Right)  return [ex + 6, flipped ? ey + 14 : ey - 10, 'start']
+  if (pos === Position.Left)   return [ex - 6, flipped ? ey + 14 : ey - 10, 'end']
+  if (pos === Position.Top)    return [flipped ? ex - 8 : ex + 8, ey - 10, flipped ? 'end' : 'start']
+  return                              [flipped ? ex - 8 : ex + 8, ey + 10, flipped ? 'end' : 'start']
 }
 
 // Same layout logic, reused for self-loop exits/entries
@@ -97,7 +98,8 @@ function CrowsFoot({ ex, ey, pos, optional }: {
 // ── Edge component ────────────────────────────────────────────────────────────
 
 export default function BarkerEdge({ id, source, target, selected }: EdgeProps) {
-  const { getNode }          = useReactFlow()
+  const { getNode, screenToFlowPosition } = useReactFlow()
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const allEdges             = useEdges()
   const rel                  = useDiagramStore(s => s.diagram.relationships.find(r => r.id === id))
   const updateRelationship    = useDiagramStore(s => s.updateRelationship)
@@ -274,7 +276,19 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
 
   // ── Floating edge (regular) ────────────────────────────────────
 
-  const { srcPos, tgtPos } = getBestSides(sourceNode, targetNode)
+  const strToPos = (s?: string): Position | undefined => {
+    if (s === 'top') return Position.Top
+    if (s === 'right') return Position.Right
+    if (s === 'bottom') return Position.Bottom
+    if (s === 'left') return Position.Left
+    return undefined
+  }
+
+  const { srcPos, tgtPos } = getBestSides(
+    sourceNode, targetNode,
+    strToPos(rel.sourceEnd.preferredSide),
+    strToPos(rel.targetEnd.preferredSide),
+  )
 
   const gn = getNode as (id: string) => Node | undefined
   const [sx, sy] = getHandleXYDistributed(sourceNode, srcPos, getDistributedFraction(source, srcPos, id, true,  allEdges, gn))
@@ -283,21 +297,93 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
   const [saX, saY] = armEnd(sx, sy, srcPos)
   const [taX, taY] = armEnd(tx, ty, tgtPos)
 
-  // Pick routing order so the first post-ARM segment is perpendicular to the ARM,
-  // eliminating backtracking (U-turn) on the source side.
-  // Source horizontal (Left/Right): ARM is horizontal → go vertical first (V-H routing)
-  // Source vertical   (Top/Bottom): ARM is vertical   → go horizontal first (H-V routing)
+  // Pick routing that avoids U-turns on BOTH ends.
+  // V-H: corner at (saX, taY) — vertical first, then horizontal to target ARM.
+  // H-V: corner at (taX, saY) — horizontal first, then vertical to target ARM.
+  // U-turn = corner is BEHIND the target ARM so the final leg goes opposite to ARM direction.
   const srcHorizontal = srcPos === Position.Left || srcPos === Position.Right
   const hDist = Math.abs(taX - saX)
   const vDist = Math.abs(taY - saY)
+
+  // V-H: horizontal leg (saX→taX) approaches target ARM.  U-turn if the approach
+  // goes WITH the ARM direction (past the tip, then ARMs back) instead of against it.
+  const tgtBacktrackVH = (tgtPos === Position.Left  && saX > taX) ||
+                          (tgtPos === Position.Right && saX < taX)
+  // H-V: vertical leg (saY→taY) approaches target ARM.  Same logic.
+  const tgtBacktrackHV = (tgtPos === Position.Top    && saY > taY) ||
+                          (tgtPos === Position.Bottom && saY < taY)
+
+  // Prefer source-perpendicular; swap only when it backtracks and the other doesn't.
+  let useVH = srcHorizontal
+    ? (!tgtBacktrackVH || tgtBacktrackHV)  // V-H default, swap to H-V if V-H backtracks and H-V doesn't
+    : (tgtBacktrackHV && !tgtBacktrackVH)  // H-V default, swap to V-H if H-V backtracks and V-H doesn't
+
+  const userSide = !!(rel.sourceEnd.preferredSide || rel.targetEnd.preferredSide)
+  const wp0 = rel.waypoints?.[0]
+
+  // Waypoint overrides routing mode (tells us which corner the user chose).
+  // Corner always uses current ARM positions so entity movement doesn't break it.
+  if (wp0) {
+    const dVH = Math.hypot(wp0.x - saX, wp0.y - taY)
+    const dHV = Math.hypot(wp0.x - taX, wp0.y - saY)
+    // Prefer the corner that avoids a target U-turn
+    if (tgtBacktrackVH && !tgtBacktrackHV) {
+      useVH = false
+    } else if (tgtBacktrackHV && !tgtBacktrackVH) {
+      useVH = true
+    } else {
+      useVH = dVH <= dHV
+    }
+  }
+
+  const cornerX = dragPos ? dragPos.x : (useVH ? saX : taX)
+  const cornerY = dragPos ? dragPos.y : (useVH ? taY : saY)
+
+  // Keep stored waypoint in sync when entities move
+  useEffect(() => {
+    if (wp0 && !dragPos) {
+      if (Math.abs(wp0.x - cornerX) > 1 || Math.abs(wp0.y - cornerY) > 1) {
+        updateRelationship(id, { waypoints: [{ x: cornerX, y: cornerY }] })
+      }
+    }
+  }, [cornerX, cornerY, wp0, dragPos, id, updateRelationship])
+
   const half  = (hDist + vDist) / 2
 
   let fullPath: string
   let sourcePath: string
   let targetPath: string
 
-  if (srcHorizontal) {
-    // V-H: vertical first to target ARM's Y, then horizontal to target ARM's X
+  if (wp0 || dragPos) {
+    // ── Waypoint/drag: walk segments from source handle to target handle,
+    //     split at midpoint of total path length (ARM→ARM distance)
+    const armDist = Math.abs(cornerX - saX) + Math.abs(cornerY - saY) + Math.abs(taX - cornerX) + Math.abs(taY - cornerY)
+    const mid = armDist / 2
+
+    // Source leg: handle → ARM → (along first orthogonal) → corner
+    const srcArmX = Math.abs(saX - sx) + Math.abs(saY - sy)  // ARM_LENGTH
+    const srcLeg1 = Math.abs(cornerX - saX) + Math.abs(cornerY - saY)
+
+    fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+
+    if (mid <= srcLeg1) {
+      // Split inside first orthogonal leg (after ARM)
+      const frac = srcLeg1 > 0 ? mid / srcLeg1 : 0
+      const mx = saX + (cornerX - saX) * frac
+      const my = saY + (cornerY - saY) * frac
+      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${mx} ${my}`
+      targetPath = `M ${mx} ${my} L ${cornerX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+    } else {
+      // Split inside second orthogonal leg (after corner)
+      const srcLeg2 = Math.abs(taX - cornerX) + Math.abs(taY - cornerY)
+      const frac = srcLeg2 > 0 ? (mid - srcLeg1) / srcLeg2 : 0
+      const mx = cornerX + (taX - cornerX) * frac
+      const my = cornerY + (taY - cornerY) * frac
+      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${cornerY} L ${mx} ${my}`
+      targetPath = `M ${mx} ${my} L ${taX} ${taY} L ${tx} ${ty}`
+    }
+  } else if (useVH) {
+    // ── Auto V-H ──
     fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
     if (vDist >= half) {
       const sy2 = saY + Math.sign(taY - saY) * half
@@ -309,7 +395,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
       targetPath = `M ${sx2} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
     }
   } else {
-    // H-V: horizontal first to target ARM's X, then vertical to target ARM's Y
+    // ── Auto H-V ──
     fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${taX} ${saY} L ${taX} ${taY} L ${tx} ${ty}`
     if (hDist >= half) {
       const sx2 = saX + Math.sign(taX - saX) * half
@@ -359,6 +445,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
           style={{ cursor: 'pointer' }}
           onClick={e => { e.stopPropagation(); updateRelationshipEnd(id, 'source', { labelFlipped: !(rel.sourceEnd.labelFlipped ?? false) }) }}>
           {rel.sourceEnd.label}
+          <title>Click to flip to other side of the line</title>
         </text>
       )}
       {rel.targetEnd.label && (
@@ -367,7 +454,55 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
           style={{ cursor: 'pointer' }}
           onClick={e => { e.stopPropagation(); updateRelationshipEnd(id, 'target', { labelFlipped: !(rel.targetEnd.labelFlipped ?? false) }) }}>
           {rel.targetEnd.label}
+          <title>Click to flip to other side of the line</title>
         </text>
+      )}
+
+      {/* Draggable waypoint — only for edges with manually chosen side(s) */}
+      {selected && userSide && (
+        <circle
+          cx={cornerX} cy={cornerY} r={5}
+          fill={dragPos ? '#60a5fa' : (wp0 ? '#60a5fa' : '#d1d5db')}
+          stroke="white" strokeWidth={2}
+          style={{ cursor: dragPos ? 'grabbing' : 'grab', pointerEvents: 'all' }}
+          onMouseDown={e => {
+            e.stopPropagation()
+            setDragPos({ x: cornerX, y: cornerY })
+            const onMove = (ev: MouseEvent) => {
+              const pos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY })
+              setDragPos(pos)
+            }
+            const onUp = () => {
+              window.removeEventListener('mousemove', onMove)
+              window.removeEventListener('mouseup', onUp)
+              setDragPos(prev => {
+                if (!prev) return null
+                const dVH = Math.hypot(prev.x - saX, prev.y - taY)
+                const dHV = Math.hypot(prev.x - taX, prev.y - saY)
+                // Prefer non-U-turning corner
+                let useVHSnap: boolean
+                if (tgtBacktrackVH && !tgtBacktrackHV) {
+                  useVHSnap = false
+                } else if (tgtBacktrackHV && !tgtBacktrackVH) {
+                  useVHSnap = true
+                } else {
+                  useVHSnap = dVH <= dHV
+                }
+                const snapped = useVHSnap ? { x: saX, y: taY } : { x: taX, y: saY }
+                updateRelationship(id, { waypoints: [snapped] })
+                return null
+              })
+            }
+            window.addEventListener('mousemove', onMove)
+            window.addEventListener('mouseup', onUp)
+          }}
+          onDoubleClick={e => {
+            e.stopPropagation()
+            updateRelationship(id, { waypoints: undefined })
+          }}
+        >
+          <title>{wp0 ? 'Double-click to reset' : 'Drag to adjust corner'}</title>
+        </circle>
       )}
     </g>
   )

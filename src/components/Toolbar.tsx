@@ -166,7 +166,7 @@ export default function Toolbar() {
                 setTimeout(() => fitView({ padding: 0.15, duration: 200 }), 50)
               }}
               className={BTN}
-            >
+                          >
               Add Attribute
             </button>
           )}

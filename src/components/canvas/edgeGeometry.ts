@@ -2,7 +2,12 @@ import { Position, type Edge, type Node } from '@xyflow/react'
 
 export const ARM_LENGTH = 30
 
-export function getBestSides(srcNode: Node, tgtNode: Node): { srcPos: Position; tgtPos: Position } {
+export function getBestSides(
+  srcNode: Node,
+  tgtNode: Node,
+  srcPreferred?: Position,
+  tgtPreferred?: Position,
+): { srcPos: Position; tgtPos: Position } {
   const sw = srcNode.measured?.width  ?? 150
   const sh = srcNode.measured?.height ?? 100
   const tw = tgtNode.measured?.width  ?? 150
@@ -31,11 +36,14 @@ export function getBestSides(srcNode: Node, tgtNode: Node): { srcPos: Position; 
   }
 
   const sides: Position[] = [Position.Right, Position.Left, Position.Top, Position.Bottom]
+  const srcCandidates = srcPreferred ? [srcPreferred] : sides
+  const tgtCandidates = tgtPreferred ? [tgtPreferred] : sides
+
   let best: { srcPos: Position; tgtPos: Position } | null = null
   let bestDist = Infinity
 
-  for (const srcPos of sides) {
-    for (const tgtPos of sides) {
+  for (const srcPos of srcCandidates) {
+    for (const tgtPos of tgtCandidates) {
       const d = dist(srcPos, tgtPos)
       if (d < bestDist) {
         bestDist = d
@@ -71,25 +79,25 @@ export function getDistributedFraction(
   entityId: string,
   side: Position,
   thisEdgeId: string,
-  isSourceEnd: boolean,
+  _isSourceEnd: boolean,
   allEdges: Edge[],
   getNode: (id: string) => Node | undefined,
 ): number {
   const coEdges = allEdges.filter(e => {
     if (e.source === e.target) return false
-    const endEntityId = isSourceEnd ? e.source : e.target
-    if (endEntityId !== entityId) return false
     const eSrc = getNode(e.source)
     const eTgt = getNode(e.target)
     if (!eSrc || !eTgt) return false
     const { srcPos, tgtPos } = getBestSides(eSrc, eTgt)
-    const eSide = isSourceEnd ? srcPos : tgtPos
-    return eSide === side
+    // Count edges touching this entity on the given side — both as source and target
+    if (e.source === entityId && srcPos === side) return true
+    if (e.target === entityId && tgtPos === side) return true
+    return false
   })
   if (coEdges.length <= 1) return 0.5
   coEdges.sort((a, b) => {
-    const aOther = getNode(isSourceEnd ? a.target : a.source)
-    const bOther = getNode(isSourceEnd ? b.target : b.source)
+    const aOther = getNode(a.source === entityId ? a.target : a.source)
+    const bOther = getNode(b.source === entityId ? b.target : b.source)
     if (!aOther || !bOther) return 0
     const aW = aOther.measured?.width  ?? 150
     const aH = aOther.measured?.height ?? 100

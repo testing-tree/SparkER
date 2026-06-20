@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Handle, Position, useReactFlow, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
 import type { Attribute } from '../../types/diagram'
 import { useDiagramStore } from '../../store/diagramStore'
+import { getBestSides } from './edgeGeometry'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   const isWarned = !!(data as EntityNodeData).tooClose
 
   const updateNodeInternals = useUpdateNodeInternals()
-  const { fitView } = useReactFlow()
+  const { fitView, getNode } = useReactFlow()
   const entity         = useDiagramStore(s => s.diagram.entities.find(e => e.id === entityId))
   const hasSubEntities = useDiagramStore(s => s.diagram.entities.some(e => e.parentEntityId === entityId))
   const updateEntity     = useDiagramStore(s => s.updateEntity)
@@ -108,6 +109,44 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   const addAttr          = useDiagramStore(s => s.addAttribute)
   const deleteAttr       = useDiagramStore(s => s.deleteAttribute)
   const reorderAttributes = useDiagramStore(s => s.reorderAttributes)
+  const selection         = useDiagramStore(s => s.selection)
+  const diagram           = useDiagramStore(s => s.diagram)
+  const updateRelationshipEnd = useDiagramStore(s => s.updateRelationshipEnd)
+
+  // Compute the active side for this entity when a relationship is selected
+  let activeSide: Position | null = null
+  let edgeEndKey: 'source' | 'target' | null = null
+  let selectedRelId: string | null = null
+
+  do {
+    const selRelId = selection.relationshipIds[0]
+    if (!selRelId) break
+    const rel = diagram.relationships.find(r => r.id === selRelId)
+    if (!rel) break
+    const isSrc = rel.sourceEntityId === entityId
+    const isTgt = rel.targetEntityId === entityId
+    if (!isSrc && !isTgt) break
+    const otherId = isSrc ? rel.targetEntityId : rel.sourceEntityId
+    const thisNode = getNode(id)
+    const otherNode = getNode(otherId)
+    if (!thisNode || !otherNode) break
+
+    const strToPos = (s?: string): Position | undefined => {
+      if (s === 'top') return Position.Top
+      if (s === 'right') return Position.Right
+      if (s === 'bottom') return Position.Bottom
+      if (s === 'left') return Position.Left
+      return undefined
+    }
+    const relSrcNode = isSrc ? thisNode : otherNode
+    const relTgtNode = isSrc ? otherNode : thisNode
+    const srcPref = strToPos(rel.sourceEnd.preferredSide)
+    const tgtPref = strToPos(rel.targetEnd.preferredSide)
+    const { srcPos, tgtPos } = getBestSides(relSrcNode, relTgtNode, srcPref, tgtPref)
+    activeSide = isSrc ? srcPos : tgtPos
+    edgeEndKey = isSrc ? 'source' : 'target'
+    selectedRelId = selRelId
+  } while (false)
 
   const [editingName,   setEditingName]   = useState(false)
   const [nameVal,       setNameVal]       = useState('')
@@ -230,7 +269,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
         isWarned
           ? 'border-orange-400 ring-2 ring-orange-400'
           : selected
-          ? 'border-blue-400 ring-2 ring-blue-400'
+          ? 'border-blue-400 ring-[0.5px] ring-blue-400'
           : isSubEntity
             ? 'border-gray-500'
             : 'border-gray-800'
@@ -247,10 +286,43 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
         </span>
       ))}
 
+      {/* Side indicators — visible when a relationship connecting this entity is selected */}
+      {activeSide !== null && SIDES.map(pos => {
+        const isActive = pos === activeSide
+        const sideValue = pos === Position.Top ? 'top' : pos === Position.Right ? 'right' : pos === Position.Bottom ? 'bottom' : 'left'
+        const posClass =
+          pos === Position.Top    ? 'absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2' :
+          pos === Position.Bottom ? 'absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2' :
+          pos === Position.Left   ? 'absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2' :
+                                    'absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2'
+        const tip = isActive ? 'Connected side' : `Switch to ${sideValue}`
+        return (
+          <div
+            key={`ind-${pos}`}
+            className={posClass}
+            style={{
+              width: 10, height: 10,
+              borderRadius: '50%',
+              background: isActive ? '#60a5fa' : '#d1d5db',
+              border: '2px solid white',
+              cursor: isActive ? 'default' : 'pointer',
+              zIndex: 10,
+              transition: 'background 150ms',
+            }}
+            title={tip}
+            onClick={isActive ? undefined : (e) => {
+              e.stopPropagation()
+              updateRelationshipEnd(selectedRelId!, edgeEndKey!, { preferredSide: sideValue })
+            }}
+          />
+        )
+      })}
+
       {/* Entity name */}
       <div
-        className="px-3 pt-3 pb-2 flex items-center justify-center cursor-text"
+        className="px-3 pt-3 pb-2 flex items-center justify-center cursor-text w-full"
         onDoubleClick={startEditName}
+        title="Double-click to rename"
       >
         {editingName ? (
           <InlineInput
@@ -259,10 +331,10 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
             onCommit={commitName}
             onCancel={cancelName}
             maxLength={64}
-            className="w-full text-center font-bold tracking-wide text-sm uppercase"
+            className="w-full text-center font-bold tracking-wide text-lg uppercase"
           />
         ) : (
-          <span className="font-bold tracking-wide text-gray-900 text-sm uppercase">
+          <span className="font-bold tracking-wide text-gray-900 text-lg uppercase">
             {entity.name}
           </span>
         )}
@@ -284,13 +356,11 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                   className="text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-default"
                   disabled={i === 0}
                   onClick={e => { e.stopPropagation(); moveAttr(attr.id, -1) }}
-                  title="Move up"
                 >▲</button>
                 <button
                   className="text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-default"
                   disabled={i === sorted.length - 1}
                   onClick={e => { e.stopPropagation(); moveAttr(attr.id, 1) }}
-                  title="Move down"
                 >▼</button>
               </span>
             )}
@@ -301,6 +371,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                 attr.kind === 'identifier' ? 'text-gray-900 font-semibold' : 'text-gray-500',
               ].join(' ')}
               onClick={e => cycleKind(e, attr)}
+              title={`${attr.kind === 'identifier' ? 'Identifier' : attr.kind === 'required' ? 'Required' : 'Optional'} — click to cycle`}
             >
               {KIND_PREFIX[attr.kind]}
             </span>
@@ -323,6 +394,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                   attr.kind === 'identifier' ? 'text-gray-900' : 'text-gray-700',
                 ].join(' ')}
                 onClick={e => startEditAttr(e, attr)}
+                title="Click to edit — Enter to confirm and add next row"
               >
                 {attr.name}
               </span>
@@ -337,7 +409,6 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                   attr.dataTypeHint ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600',
                 ].join(' ')}
                 style={{ left: 'calc(100% + 24px)', top: '50%', transform: 'translateY(-50%)' }}
-                title="Click to set SQL data type"
               >
                 {attr.dataTypeHint ?? 'auto'}
               </span>
