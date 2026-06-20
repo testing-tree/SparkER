@@ -403,9 +403,9 @@ export default function Canvas() {
               <button onClick={() => setShowHelp(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none cursor-pointer">&times;</button>
             </div>
             <div className="text-xs text-gray-600 space-y-3 leading-relaxed">
-              <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 leading-snug">
-                Hover over any control — attribute prefixes (<b>#</b>, <b>*</b>, <b>o</b>), side connection dots, buttons, checkboxes — for a brief explanation.
-              </div>
+              <p className="text-[13px] font-semibold text-blue-700">
+                Hover over any control for a brief explanation.
+              </p>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Entities</p>
                 <p>Click <b>Add Entity</b> (top-left toolbar) or the canvas to create. <b>Double-click</b> the name to rename. <b>Select</b> an entity to reveal <b>up/down arrows</b> (left) to reorder attributes, and <b>data type tags</b> (right) — click a tag to cycle through INT, VARCHAR(255), DATE, etc.</p>

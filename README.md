@@ -63,7 +63,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 - Verb labels default to alternating sides of the line for cleaner readability; click any label to flip it to the opposite side
 - **Manual side selection:** select a relationship to reveal connection dots on each connected entity. Click any dot to route the line through that side of the entity box. The Properties panel shows the current side; click it to restore auto-routing
 - **Draggable waypoints:** when a side has been manually chosen, a draggable handle appears at the line bend. Drag it to reposition; on release it snaps to the nearest valid orthogonal corner. Double-click the handle to clear the waypoint and return to auto-routing
-- ⚠️ Manual side selection and waypoint dragging give you full control over line layout, but may produce routings that the auto mode would avoid (e.g. visually awkward paths). Adjust manually or restore auto-routing if needed
+- <u>Manual side selection and waypoint dragging give you full control over line layout, but may produce routings that the auto mode would avoid (e.g. visually awkward paths). Adjust manually or restore auto-routing if needed.</u>
 
 ### Recursive Loops
 - Add a recursive relationship to any entity via the **Recursive** button
@@ -108,13 +108,34 @@ Click the **Privacy** button in the app for full details and instructions on how
 ### Interface overview
 
 | Location | Controls |
-|---|---|
+|:---|:---|
 | **Top-left** | Diagram name (click to edit), **Add Entity**, **Add Attribute** (when an entity is selected) |
 | **Top-right** | **Save JSON**, **Load JSON**, **Export PNG**, **Export SVG**, **Export SQL** |
 | **Bottom-left** | Zoom controls (zoom in, zoom out, fit-to-view), **?** help button |
 | **Bottom-right** | **Lock/Unlock** viewport, **Undo**, **Redo** |
 | **Bottom edge** | **Privacy** link (opens privacy & data use info) |
 | **Right side** | **Properties** panel (appears when an entity, relationship, or arc is selected) |
+
+### Hover tooltips
+
+Hover over any interactive control for about one second to see a brief explanation. The following elements have tooltips:
+
+| Element | Tooltip |
+|:---|:---|
+| Entity name | Double-click to rename |
+| Attribute prefix (`#` `*` `o`) | Identifier / Required / Optional — click to cycle |
+| Attribute name | Click to edit — Enter to confirm and add next row |
+| Data type tag | Click to set SQL data type |
+| Side connection dots | Connected side / Switch to top, right, bottom, left |
+| Cardinality toggle | Single entity / Multiple entities (crow's foot) |
+| Optionality toggle | Required (solid line) / Optional (dashed line) |
+| Label input | Relationship verb label |
+| UID bar checkbox | Weak entity identification bar |
+| Side auto / side name | Click a side dot on the entity box / Click to restore auto-routing |
+| Recursive / Recursive m:m | Add a self-referencing relationship / Create an intersection entity |
+| Delete Arc | Remove this exclusive arc constraint |
+| Verb label (on the line) | Click to flip to other side of the line |
+| Waypoint handle (on the bend) | Drag to adjust corner / Double-click to reset |
 
 ### 1. Create and name entities
 
@@ -153,7 +174,7 @@ Click the relationship line to select it. The **Properties** panel opens on the 
 Common configurations:
 
 | Scenario | Source end | Target end |
-|---|---|---|
+|:---|:---|---|
 | One customer owns many devices | one / mandatory | many / mandatory |
 | Customer may optionally have a profile | one / optional | one / mandatory |
 | Technician optionally supervises others | one / optional | many / optional |
@@ -189,7 +210,7 @@ Click **Undo** / **Redo** (bottom-right) or use keyboard shortcuts: **Ctrl/Cmd+Z
 ## Keyboard Shortcuts
 
 | Key | Action |
-|---|---|
+|:---|:---|
 | `Ctrl/Cmd + C` | Copy selected entity (or entities) |
 | `Ctrl/Cmd + V` | Paste copied entities |
 | `Ctrl/Cmd + Z` | Undo |
@@ -223,7 +244,7 @@ Key rules enforced or supported by this editor:
 ## Tech Stack
 
 | Concern | Choice |
-|---|---|
+|:---|:---|
 | Framework | React 19 with TypeScript |
 | Build tool | Vite |
 | Styling | Tailwind CSS v4 |

@@ -53,6 +53,7 @@ function InlineInput({
   onEnter,
   onDeleteEmpty,
   maxLength,
+  size,
   className = '',
 }: {
   value: string
@@ -62,6 +63,7 @@ function InlineInput({
   onEnter?: () => void
   onDeleteEmpty?: () => void
   maxLength?: number
+  size?: number
   className?: string
 }) {
   return (
@@ -69,6 +71,7 @@ function InlineInput({
       autoFocus
       value={value}
       maxLength={maxLength}
+      size={size}
       onChange={e => onChange(e.target.value)}
       onFocus={e => e.target.select()}
       onBlur={onCommit}
@@ -331,7 +334,8 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
             onCommit={commitName}
             onCancel={cancelName}
             maxLength={64}
-            className="w-full text-center font-bold tracking-wide text-lg uppercase"
+            className="w-full text-center font-bold tracking-wide text-lg uppercase min-w-0"
+            size={1}
           />
         ) : (
           <span className="font-bold tracking-wide text-gray-900 text-lg uppercase">
