@@ -132,6 +132,7 @@ function LabelInput({
   value,
   onChange,
   onCommit,
+  title,
 }: {
   label: string
   value: string

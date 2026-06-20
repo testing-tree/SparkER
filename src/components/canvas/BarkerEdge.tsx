@@ -360,8 +360,6 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
     const armDist = Math.abs(cornerX - saX) + Math.abs(cornerY - saY) + Math.abs(taX - cornerX) + Math.abs(taY - cornerY)
     const mid = armDist / 2
 
-    // Source leg: handle → ARM → (along first orthogonal) → corner
-    const srcArmX = Math.abs(saX - sx) + Math.abs(saY - sy)  // ARM_LENGTH
     const srcLeg1 = Math.abs(cornerX - saX) + Math.abs(cornerY - saY)
 
     fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
