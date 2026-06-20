@@ -63,7 +63,7 @@ Click the **Privacy** button in the app for full details and instructions on how
 - Verb labels default to alternating sides of the line for cleaner readability; click any label to flip it to the opposite side
 - **Manual side selection:** select a relationship to reveal connection dots on each connected entity. Click any dot to route the line through that side of the entity box. The Properties panel shows the current side; click it to restore auto-routing
 - **Draggable waypoints:** when a side has been manually chosen, a draggable handle appears at the line bend. Drag it to reposition; on release it snaps to the nearest valid orthogonal corner. Double-click the handle to clear the waypoint and return to auto-routing
-- <u>Manual side selection and waypoint dragging give you full control over line layout, but may produce routings that the auto mode would avoid (e.g. visually awkward paths). Adjust manually or restore auto-routing if needed.</u>
+- > Manual side selection and waypoint dragging give you full control over line layout, but may produce routings that the auto mode would avoid (e.g. visually awkward paths). Adjust manually or restore auto-routing if needed.
 
 ### Recursive Loops
 - Add a recursive relationship to any entity via the **Recursive** button
