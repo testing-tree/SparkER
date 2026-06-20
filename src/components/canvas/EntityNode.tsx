@@ -345,7 +345,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
       </div>
 
       {/* Attribute list */}
-      <div className="px-3 pb-3 flex flex-col">
+      <div className="px-[18px] pb-3 flex flex-col">
         {sorted.map((attr, i) => (
           <div key={attr.id}
             className="relative flex items-baseline gap-1.5 text-sm font-mono py-0.5"
