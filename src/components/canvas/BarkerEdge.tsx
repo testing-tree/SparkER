@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useReactFlow, useEdges, useInternalNode, Position, type EdgeProps, type Node } from '@xyflow/react'
 import { useDiagramStore } from '../../store/diagramStore'
 import { getBestSides, getHandleXYDistributed, armEnd, getDistributedFraction } from './edgeGeometry'
@@ -338,15 +338,6 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
 
   const cornerX = dragPos ? dragPos.x : (useVH ? saX : taX)
   const cornerY = dragPos ? dragPos.y : (useVH ? taY : saY)
-
-  // Keep stored waypoint in sync when entities move
-  useEffect(() => {
-    if (wp0 && !dragPos) {
-      if (Math.abs(wp0.x - cornerX) > 1 || Math.abs(wp0.y - cornerY) > 1) {
-        updateRelationship(id, { waypoints: [{ x: cornerX, y: cornerY }] })
-      }
-    }
-  }, [cornerX, cornerY, wp0, dragPos, id, updateRelationship])
 
   const half  = (hDist + vDist) / 2
 

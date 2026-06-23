@@ -117,23 +117,20 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
   const updateRelationshipEnd = useDiagramStore(s => s.updateRelationshipEnd)
 
   // Compute the active side for this entity when a relationship is selected
+  const selRelId = selection.relationshipIds?.[0] ?? null
+  const selRel = selRelId ? diagram.relationships.find(r => r.id === selRelId) : null
+  const isSrc = selRel ? selRel.sourceEntityId === entityId : false
+  const isTgt = selRel ? selRel.targetEntityId === entityId : false
+  const involved = isSrc || isTgt
+  const otherId = involved ? (isSrc ? selRel!.targetEntityId : selRel!.sourceEntityId) : null
+  const thisNode = involved ? getNode(id) ?? null : null
+  const otherNode = (involved && otherId) ? getNode(otherId) ?? null : null
+
   let activeSide: Position | null = null
   let edgeEndKey: 'source' | 'target' | null = null
   let selectedRelId: string | null = null
 
-  do {
-    const selRelId = selection.relationshipIds[0]
-    if (!selRelId) break
-    const rel = diagram.relationships.find(r => r.id === selRelId)
-    if (!rel) break
-    const isSrc = rel.sourceEntityId === entityId
-    const isTgt = rel.targetEntityId === entityId
-    if (!isSrc && !isTgt) break
-    const otherId = isSrc ? rel.targetEntityId : rel.sourceEntityId
-    const thisNode = getNode(id)
-    const otherNode = getNode(otherId)
-    if (!thisNode || !otherNode) break
-
+  if (selRel && thisNode && otherNode) {
     const strToPos = (s?: string): Position | undefined => {
       if (s === 'top') return Position.Top
       if (s === 'right') return Position.Right
@@ -143,13 +140,13 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
     }
     const relSrcNode = isSrc ? thisNode : otherNode
     const relTgtNode = isSrc ? otherNode : thisNode
-    const srcPref = strToPos(rel.sourceEnd.preferredSide)
-    const tgtPref = strToPos(rel.targetEnd.preferredSide)
+    const srcPref = strToPos(selRel.sourceEnd.preferredSide)
+    const tgtPref = strToPos(selRel.targetEnd.preferredSide)
     const { srcPos, tgtPos } = getBestSides(relSrcNode, relTgtNode, srcPref, tgtPref)
     activeSide = isSrc ? srcPos : tgtPos
     edgeEndKey = isSrc ? 'source' : 'target'
     selectedRelId = selRelId
-  } while (false)
+  }
 
   const [editingName,   setEditingName]   = useState(false)
   const [nameVal,       setNameVal]       = useState('')
