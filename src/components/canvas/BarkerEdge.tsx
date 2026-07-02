@@ -451,7 +451,9 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
   return (
     <g fill="none" strokeLinecap="round">
       {/* Hit area */}
-      <path d={fullPath} stroke="transparent" strokeWidth={20} />
+      <path d={fullPath} stroke="transparent" strokeWidth={20}>
+        <title>{hasCustom ? 'Custom routing' : 'Auto routing'}</title>
+      </path>
 
       {/* Source half */}
       <path d={sourcePath} stroke={stroke} strokeWidth={sw}

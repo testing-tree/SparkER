@@ -61,8 +61,8 @@ Click the **Privacy** button in the app for full details and instructions on how
 - Optional ends render as dashed lines; the two halves of a relationship line are styled independently (half-dashed, half-solid)
 - Crow's foot symbol on the "many" end; UID bar tick mark for weak entity identification
 - Verb labels default to alternating sides of the line for cleaner readability; click any label to flip it to the opposite side
-- **Manual side selection:** select a relationship to reveal connection dots on each connected entity. Click any dot to route the line through that side of the entity box. The Properties panel shows the current side; click it to restore auto-routing
-- **Draggable waypoints:** when a side has been manually chosen, a draggable handle appears at the line bend. Drag it to reposition; on release it snaps to the nearest valid orthogonal corner. Double-click the handle to clear the waypoint and return to auto-routing
+- **Manual side selection:** select a relationship to reveal connection dots on each connected entity. Click any dot to route the line through that side of the entity box. The Properties panel shows the current side; click it to restore auto-routing. Active dots and selected relationship lines turn <span style="color:#059669">**green**</span> to indicate custom mode.
+- **Draggable waypoints:** when a side has been manually chosen, a draggable handle appears on the line. Drag it freely within the rectangle formed by the two ARM endpoints; the path stays fully orthogonal. The handle and the selected line turn <span style="color:#059669">**green**</span> when a waypoint is set. Double-click the handle to clear the waypoint and return to auto-routing.
   > Manual side selection and waypoint dragging give you full control over line layout, but may produce routings that the auto mode would avoid (e.g. visually awkward paths). Adjust manually or restore auto-routing if needed.
 
 ### Recursive Loops
@@ -126,7 +126,7 @@ Hover over any interactive control for about one second to see a brief explanati
 | Attribute prefix (`#` `*` `o`) | Identifier / Required / Optional — click to cycle |
 | Attribute name | Click to edit — Enter to confirm and add next row |
 | Data type tag | Click to set SQL data type |
-| Side connection dots | Connected side / Switch to top, right, bottom, left |
+| Side connection dots | Connected side / Switch to top, right, bottom, left — green when custom |
 | Cardinality toggle | Single entity / Multiple entities (crow's foot) |
 | Optionality toggle | Required (solid line) / Optional (dashed line) |
 | Label input | Relationship verb label |
@@ -134,8 +134,9 @@ Hover over any interactive control for about one second to see a brief explanati
 | Side auto / side name | Click a side dot on the entity box / Click to restore auto-routing |
 | Recursive / Recursive m:m | Add a self-referencing relationship / Create an intersection entity |
 | Delete Arc | Remove this exclusive arc constraint |
+| Relationship line (selected) | Blue in auto mode, green when custom side or waypoint is active |
 | Verb label (on the line) | Click to flip to other side of the line |
-| Waypoint handle (on the bend) | Drag to adjust corner / Double-click to reset |
+| Waypoint handle (on the line) | Drag freely to adjust routing / Double-click to reset — green when set |
 
 ### 1. Create and name entities
 
@@ -167,9 +168,9 @@ Click the relationship line to select it. The **Properties** panel opens on the 
 - **Optionality:** `mandatory` (solid line) or `optional` (dashed line). The two halves of a relationship line are styled independently.
 - **Verb label:** descriptive text placed along the line (e.g. "owns", "belongs to"). Click the label to flip it to the opposite side of the line.
 - **UID bar:** tick mark indicating weak entity identification (FK-as-PK).
-- **Side:** which side of the entity box the line connects to. By default, the side is chosen automatically. To override, click one of the connection dots that appear on the entity boxes when a relationship is selected. Click the side name in the Properties panel to restore automatic selection.
+- **Side:** which side of the entity box the line connects to. By default, the side is chosen automatically. To override, click one of the connection dots that appear on the entity boxes when a relationship is selected — active dots turn <span style="color:#059669">**green**</span> in custom mode. Click the side name in the Properties panel to restore automatic selection.
 
-**Dragging a waypoint:** after manually choosing a side, a draggable circle appears at the line bend. Drag it to reposition the corner; on release it snaps to the nearest right-angle position. Double-click the handle to clear the waypoint. Note that manual adjustment may produce layouts the automatic routing would avoid; adjust as needed.
+**Dragging a waypoint:** after manually choosing a side, a draggable circle appears on the line. Drag it freely within the rectangle between the two ARM endpoints; the path stays fully orthogonal with up to two corners. The handle and selected line turn <span style="color:#059669">**green**</span> when a waypoint is set. Double-click the handle to clear the waypoint. Moving either entity box preserves all routing settings.
 
 Common configurations:
 

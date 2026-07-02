@@ -297,7 +297,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
                                     'absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2'
         const hasPrefSide = selRel ? (isSrc ? !!selRel.sourceEnd.preferredSide : !!selRel.targetEnd.preferredSide) : false
         const dotColor = isActive ? (hasPrefSide ? '#059669' : '#60a5fa') : '#d1d5db'
-        const tip = isActive ? (hasPrefSide ? 'Custom side' : 'Connected side') : `Switch to ${sideValue}`
+        const tip = isActive ? (hasPrefSide ? 'Custom side (green)' : 'Connected side') : `Switch to ${sideValue}`
         return (
           <div
             key={`ind-${pos}`}
