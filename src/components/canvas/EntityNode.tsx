@@ -295,7 +295,9 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
           pos === Position.Bottom ? 'absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2' :
           pos === Position.Left   ? 'absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2' :
                                     'absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2'
-        const tip = isActive ? 'Connected side' : `Switch to ${sideValue}`
+        const hasPrefSide = selRel ? (isSrc ? !!selRel.sourceEnd.preferredSide : !!selRel.targetEnd.preferredSide) : false
+        const dotColor = isActive ? (hasPrefSide ? '#34d399' : '#60a5fa') : '#d1d5db'
+        const tip = isActive ? (hasPrefSide ? 'Custom side' : 'Connected side') : `Switch to ${sideValue}`
         return (
           <div
             key={`ind-${pos}`}
@@ -303,7 +305,7 @@ export default function EntityNode({ id, data, selected }: NodeProps) {
             style={{
               width: 10, height: 10,
               borderRadius: '50%',
-              background: isActive ? '#60a5fa' : '#d1d5db',
+              background: dotColor,
               border: '2px solid white',
               cursor: isActive ? 'default' : 'pointer',
               zIndex: 10,

@@ -35,7 +35,9 @@ export default function ArcOverlay() {
           for (const relId of arc.relationshipIds) {
             const rel = diagram.relationships.find(r => r.id === relId)
             if (!rel) continue
-            const ep = getSourceArmEndpoint(rel, allEdges, resolveNode)
+            const ep = getSourceArmEndpoint(
+              { ...rel, preferredSrc: rel.sourceEnd.preferredSide, preferredTgt: rel.targetEnd.preferredSide },
+              allEdges, resolveNode)
             if (ep) endpoints.push(ep)
           }
           if (endpoints.length < 2) return null

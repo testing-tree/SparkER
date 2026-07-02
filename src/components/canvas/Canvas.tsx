@@ -5,6 +5,7 @@ import {
   Controls,
   ControlButton,
   ConnectionMode,
+  Position,
   useNodesState,
   useEdgesState,
   type Node,
@@ -28,6 +29,7 @@ import ArcOverlay from './ArcOverlay'
 import ClipboardHandler, { pasteEntities } from './ClipboardHandler'
 import WelcomeModal from '../WelcomeModal'
 import type { Entity, Relationship } from '../../types/diagram'
+import { getBestSides, getDistributedFraction } from './edgeGeometry'
 
 const nodeTypes = { entityNode: EntityNode }
 const edgeTypes = { barkerEdge: BarkerEdge }
@@ -247,7 +249,7 @@ export default function Canvas() {
   // Protection zone: minimum border-to-border distance between entities
   const PROTECTION = 2 * 30 // 2 × ARM_LENGTH
 
-  // Detect center alignment and enforce minimum entity spacing during drag.
+  // Detect center and handle-level alignment during drag.
   const onNodeDrag: OnNodeDrag = useCallback((_evt, draggedNode) => {
     if (draggedNode.parentId) return
     const dCx = draggedNode.position.x + (draggedNode.measured?.width  ?? 150) / 2
@@ -261,6 +263,48 @@ export default function Canvas() {
       if (Math.abs(dCx - cx) < SNAP_THRESHOLD) newGuides.x = cx
       if (Math.abs(dCy - cy) < SNAP_THRESHOLD) newGuides.y = cy
     })
+
+    // Handle-level alignment for connected entities
+    function strToPos(s?: string): Position | undefined {
+      if (s === 'top') return Position.Top
+      if (s === 'right') return Position.Right
+      if (s === 'bottom') return Position.Bottom
+      if (s === 'left') return Position.Left
+      return undefined
+    }
+    const dw = draggedNode.measured?.width ?? 150, dh = draggedNode.measured?.height ?? 100
+    const eId = (draggedNode.data as EntityNodeData)?.entityId
+    if (eId) {
+      const state = useDiagramStore.getState()
+      for (const rel of state.diagram.relationships) {
+        const isSrc = rel.sourceEntityId === eId, isTgt = rel.targetEntityId === eId
+        if (!isSrc && !isTgt) continue
+        const otherId = isSrc ? rel.targetEntityId : rel.sourceEntityId
+        const other = nodesRef.current.find(n => n.id === otherId)
+        if (!other) continue
+        const ow = other.measured?.width ?? 150, oh = other.measured?.height ?? 100
+        const drNode = isSrc ? draggedNode : other
+        const otNode = isSrc ? other : draggedNode
+        const { srcPos, tgtPos } = getBestSides(drNode as Node, otNode as Node,
+          strToPos(rel.sourceEnd.preferredSide), strToPos(rel.targetEnd.preferredSide))
+        const dSide = isSrc ? srcPos : tgtPos
+        const oSide = isSrc ? tgtPos : srcPos
+        const dFrac = getDistributedFraction(eId, dSide, rel.id, isSrc, edges,
+          (id: string) => nodesRef.current.find(n => n.id === id) as Node | undefined)
+        const oFrac = getDistributedFraction(otherId, oSide, rel.id, !isSrc, edges,
+          (id: string) => nodesRef.current.find(n => n.id === id) as Node | undefined)
+        if (dSide === Position.Left || dSide === Position.Right) {
+          const dHy = draggedNode.position.y + dh * dFrac
+          const oHy = other.position.y + oh * oFrac
+          if (Math.abs(dHy - oHy) < 12) newGuides.y = oHy
+        } else {
+          const dHx = draggedNode.position.x + dw * dFrac
+          const oHx = other.position.x + ow * oFrac
+          if (Math.abs(dHx - oHx) < 12) newGuides.x = oHx
+        }
+        if (newGuides.x !== undefined || newGuides.y !== undefined) break
+      }
+    }
 
     // Enforce protection zone (skip during multi-select drag — positions of other
     // dragged nodes aren't reflected in nodesRef yet, causing desync)
@@ -289,7 +333,7 @@ export default function Canvas() {
         return prev.map(n => n.data?.tooClose ? { ...n, data: { ...n.data, tooClose: false } } : n)
       })
     }
-  }, [setNodes, clampPosition])
+  }, [setNodes, clampPosition, edges])
 
   // Apply snap and write final position to store (creates undo entry when snap occurs).
   const onNodeDragStop: OnNodeDrag = useCallback((_evt, node) => {

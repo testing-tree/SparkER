@@ -100,6 +100,7 @@ function CrowsFoot({ ex, ey, pos, optional }: {
 export default function BarkerEdge({ id, source, target, selected }: EdgeProps) {
   const { getNode, screenToFlowPosition } = useReactFlow()
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const [dragVH, setDragVH] = useState<boolean | null>(null)
   const allEdges             = useEdges()
   const rel                  = useDiagramStore(s => s.diagram.relationships.find(r => r.id === id))
   const updateRelationship    = useDiagramStore(s => s.updateRelationship)
@@ -291,8 +292,12 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
   )
 
   const gn = getNode as (id: string) => Node | undefined
-  const [sx, sy] = getHandleXYDistributed(sourceNode, srcPos, getDistributedFraction(source, srcPos, id, true,  allEdges, gn))
-  const [tx, ty] = getHandleXYDistributed(targetNode, tgtPos, getDistributedFraction(target, tgtPos, id, false, allEdges, gn))
+  const getPrefSides = (edgeId: string) => {
+    const r = useDiagramStore.getState().diagram.relationships.find(rel => rel.id === edgeId)
+    return r ? { src: r.sourceEnd.preferredSide, tgt: r.targetEnd.preferredSide } : null
+  }
+  const [sx, sy] = getHandleXYDistributed(sourceNode, srcPos, getDistributedFraction(source, srcPos, id, true,  allEdges, gn, getPrefSides))
+  const [tx, ty] = getHandleXYDistributed(targetNode, tgtPos, getDistributedFraction(target, tgtPos, id, false, allEdges, gn, getPrefSides))
 
   const [saX, saY] = armEnd(sx, sy, srcPos)
   const [taX, taY] = armEnd(tx, ty, tgtPos)
@@ -323,21 +328,34 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
 
   // Waypoint overrides routing mode (tells us which corner the user chose).
   // Corner always uses current ARM positions so entity movement doesn't break it.
-  if (wp0) {
+  let effectiveWp0 = wp0
+  // Lock routing mode during drag so preview is stable
+  if (dragVH !== null) useVH = dragVH
+
+  if (!dragPos && wp0) {
     const dVH = Math.hypot(wp0.x - saX, wp0.y - taY)
     const dHV = Math.hypot(wp0.x - taX, wp0.y - saY)
+    const wpImpliesVH = dVH <= dHV
     // Prefer the corner that avoids a target U-turn
     if (tgtBacktrackVH && !tgtBacktrackHV) {
       useVH = false
+      if (wpImpliesVH) effectiveWp0 = undefined
     } else if (tgtBacktrackHV && !tgtBacktrackVH) {
       useVH = true
+      if (!wpImpliesVH) effectiveWp0 = undefined
     } else {
-      useVH = dVH <= dHV
+      useVH = wpImpliesVH
     }
   }
 
-  const cornerX = dragPos ? dragPos.x : (useVH ? saX : taX)
-  const cornerY = dragPos ? dragPos.y : (useVH ? taY : saY)
+  // Corner: dragPos > waypoint > auto (V-H or H-V corner)
+  const cornerX = dragPos ? dragPos.x : (effectiveWp0 ? effectiveWp0.x : (useVH ? saX : taX))
+  const cornerY = dragPos ? dragPos.y : (effectiveWp0 ? effectiveWp0.y : (useVH ? taY : saY))
+
+  // Clear stale waypoint when U-turn detection overrides it
+  if (wp0 && !effectiveWp0 && !dragPos) {
+    setTimeout(() => updateRelationship(id, { waypoints: undefined }), 0)
+  }
 
   const half  = (hDist + vDist) / 2
 
@@ -346,30 +364,59 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
   let targetPath: string
 
   if (wp0 || dragPos) {
-    // ── Waypoint/drag: walk segments from source handle to target handle,
-    //     split at midpoint of total path length (ARM→ARM distance)
-    const armDist = Math.abs(cornerX - saX) + Math.abs(cornerY - saY) + Math.abs(taX - cornerX) + Math.abs(taY - cornerY)
-    const mid = armDist / 2
-
-    const srcLeg1 = Math.abs(cornerX - saX) + Math.abs(cornerY - saY)
-
-    fullPath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
-
-    if (mid <= srcLeg1) {
-      // Split inside first orthogonal leg (after ARM)
-      const frac = srcLeg1 > 0 ? mid / srcLeg1 : 0
-      const mx = saX + (cornerX - saX) * frac
-      const my = saY + (cornerY - saY) * frac
-      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${mx} ${my}`
-      targetPath = `M ${mx} ${my} L ${cornerX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+    // ── Waypoint/drag: dual-corner path through (cornerX, cornerY) ──
+    if (useVH) {
+      // source ARM → (cornerX,saY) → (cornerX,cornerY) → (taX,cornerY) → target ARM
+      fullPath  = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${saY} L ${cornerX} ${cornerY} L ${taX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+      const h0  = Math.abs(cornerX - saX)
+      const v   = Math.abs(cornerY - saY)
+      const h1  = Math.abs(taX - cornerX)
+      const v1  = Math.abs(taY - cornerY)
+      const total = h0 + v + h1 + v1
+      const mid   = total / 2
+      if (mid <= h0) {
+        const cx = saX + Math.sign(cornerX - saX) * mid
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${cx} ${saY}`
+        targetPath = `M ${cx} ${saY} L ${cornerX} ${saY} L ${cornerX} ${cornerY} L ${taX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+      } else if (mid <= h0 + v) {
+        const cy = saY + Math.sign(cornerY - saY) * (mid - h0)
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${saY} L ${cornerX} ${cy}`
+        targetPath = `M ${cornerX} ${cy} L ${cornerX} ${cornerY} L ${taX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+      } else if (mid <= h0 + v + h1) {
+        const cx = cornerX + Math.sign(taX - cornerX) * (mid - h0 - v)
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${saY} L ${cornerX} ${cornerY} L ${cx} ${cornerY}`
+        targetPath = `M ${cx} ${cornerY} L ${taX} ${cornerY} L ${taX} ${taY} L ${tx} ${ty}`
+      } else {
+        const cy = cornerY + Math.sign(taY - cornerY) * (mid - h0 - v - h1)
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${saY} L ${cornerX} ${cornerY} L ${taX} ${cornerY} L ${taX} ${cy}`
+        targetPath = `M ${taX} ${cy} L ${taX} ${taY} L ${tx} ${ty}`
+      }
     } else {
-      // Split inside second orthogonal leg (after corner)
-      const srcLeg2 = Math.abs(taX - cornerX) + Math.abs(taY - cornerY)
-      const frac = srcLeg2 > 0 ? (mid - srcLeg1) / srcLeg2 : 0
-      const mx = cornerX + (taX - cornerX) * frac
-      const my = cornerY + (taY - cornerY) * frac
-      sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${cornerX} ${cornerY} L ${mx} ${my}`
-      targetPath = `M ${mx} ${my} L ${taX} ${taY} L ${tx} ${ty}`
+      // source ARM → (saX,cornerY) → (cornerX,cornerY) → (cornerX,taY) → target ARM
+      fullPath  = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${cornerY} L ${cornerX} ${cornerY} L ${cornerX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+      const v0  = Math.abs(cornerY - saY)
+      const h   = Math.abs(cornerX - saX)
+      const v1  = Math.abs(taY - cornerY)
+      const h1  = Math.abs(taX - cornerX)
+      const total = v0 + h + v1 + h1
+      const mid   = total / 2
+      if (mid <= v0) {
+        const cy = saY + Math.sign(cornerY - saY) * mid
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${cy}`
+        targetPath = `M ${saX} ${cy} L ${saX} ${cornerY} L ${cornerX} ${cornerY} L ${cornerX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+      } else if (mid <= v0 + h) {
+        const cx = saX + Math.sign(cornerX - saX) * (mid - v0)
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${cornerY} L ${cx} ${cornerY}`
+        targetPath = `M ${cx} ${cornerY} L ${cornerX} ${cornerY} L ${cornerX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+      } else if (mid <= v0 + h + v1) {
+        const cy = cornerY + Math.sign(taY - cornerY) * (mid - v0 - h)
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${cornerY} L ${cornerX} ${cornerY} L ${cornerX} ${cy}`
+        targetPath = `M ${cornerX} ${cy} L ${cornerX} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+      } else {
+        const cx = cornerX + Math.sign(taX - cornerX) * (mid - v0 - h - v1)
+        sourcePath = `M ${sx} ${sy} L ${saX} ${saY} L ${saX} ${cornerY} L ${cornerX} ${cornerY} L ${cornerX} ${taY} L ${cx} ${taY}`
+        targetPath = `M ${cx} ${taY} L ${taX} ${taY} L ${tx} ${ty}`
+      }
     }
   } else if (useVH) {
     // ── Auto V-H ──
@@ -456,29 +503,21 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
           style={{ cursor: dragPos ? 'grabbing' : 'grab', pointerEvents: 'all' }}
           onMouseDown={e => {
             e.stopPropagation()
+            setDragVH(useVH)
             setDragPos({ x: cornerX, y: cornerY })
             const onMove = (ev: MouseEvent) => {
-              const pos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY })
-              setDragPos(pos)
+              const raw = screenToFlowPosition({ x: ev.clientX, y: ev.clientY })
+              const xLo = Math.min(saX, taX), xHi = Math.max(saX, taX)
+              const yLo = Math.min(saY, taY), yHi = Math.max(saY, taY)
+              setDragPos({ x: Math.max(xLo, Math.min(xHi, raw.x)), y: Math.max(yLo, Math.min(yHi, raw.y)) })
             }
             const onUp = () => {
               window.removeEventListener('mousemove', onMove)
               window.removeEventListener('mouseup', onUp)
               setDragPos(prev => {
                 if (!prev) return null
-                const dVH = Math.hypot(prev.x - saX, prev.y - taY)
-                const dHV = Math.hypot(prev.x - taX, prev.y - saY)
-                // Prefer non-U-turning corner
-                let useVHSnap: boolean
-                if (tgtBacktrackVH && !tgtBacktrackHV) {
-                  useVHSnap = false
-                } else if (tgtBacktrackHV && !tgtBacktrackVH) {
-                  useVHSnap = true
-                } else {
-                  useVHSnap = dVH <= dHV
-                }
-                const snapped = useVHSnap ? { x: saX, y: taY } : { x: taX, y: saY }
-                updateRelationship(id, { waypoints: [snapped] })
+                updateRelationship(id, { waypoints: [{ x: prev.x, y: prev.y }] })
+                setDragVH(null)
                 return null
               })
             }
@@ -487,6 +526,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
           }}
           onDoubleClick={e => {
             e.stopPropagation()
+            setDragVH(null)
             updateRelationship(id, { waypoints: undefined })
           }}
         >

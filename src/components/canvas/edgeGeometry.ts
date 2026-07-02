@@ -29,9 +29,22 @@ export function getBestSides(
   }
 
   // Compute orthogonal path distance for a side pair: |taX - saX| + |taY - saY|
+  // Returns Infinity for pairs that would cause a target-side U-turn.
   function dist(srcPos: Position, tgtPos: Position): number {
     const [saX, saY] = arm(srcPos, sx, sy, sw, sh)
     const [taX, taY] = arm(tgtPos, tx, ty, tw, th)
+    // Check for U-turn: source-perpendicular routing — first leg perpendicular to source ARM,
+    // second leg approaches target ARM.  U-turn when the approach comes from behind the ARM.
+    const srcH = srcPos === Position.Left || srcPos === Position.Right
+    if (srcH) {
+      // V-H: horizontal approach leg. U-turn if target-facing direction conflicts
+      if ((tgtPos === Position.Left  && saX > taX) ||
+          (tgtPos === Position.Right && saX < taX)) return Infinity
+    } else {
+      // H-V: vertical approach leg. U-turn if target-facing direction conflicts
+      if ((tgtPos === Position.Top    && saY > taY) ||
+          (tgtPos === Position.Bottom && saY < taY)) return Infinity
+    }
     return Math.abs(taX - saX) + Math.abs(taY - saY)
   }
 
@@ -48,6 +61,18 @@ export function getBestSides(
       if (d < bestDist) {
         bestDist = d
         best = { srcPos, tgtPos }
+      }
+    }
+  }
+
+  // Fallback: if all pairs cause U-turns, pick the shortest any pair
+  if (!best) {
+    for (const srcPos of srcCandidates) {
+      for (const tgtPos of tgtCandidates) {
+        const [saX, saY] = arm(srcPos, sx, sy, sw, sh)
+        const [taX, taY] = arm(tgtPos, tx, ty, tw, th)
+        const d = Math.abs(taX - saX) + Math.abs(taY - saY)
+        if (d < bestDist) { bestDist = d; best = { srcPos, tgtPos } }
       }
     }
   }
@@ -75,6 +100,14 @@ export function armEnd(x: number, y: number, pos: Position): [number, number] {
   return                              [x + ARM_LENGTH, y]
 }
 
+function strToPos(s?: string): Position | undefined {
+  if (s === 'top') return Position.Top
+  if (s === 'right') return Position.Right
+  if (s === 'bottom') return Position.Bottom
+  if (s === 'left') return Position.Left
+  return undefined
+}
+
 export function getDistributedFraction(
   entityId: string,
   side: Position,
@@ -82,13 +115,16 @@ export function getDistributedFraction(
   _isSourceEnd: boolean,
   allEdges: Edge[],
   getNode: (id: string) => Node | undefined,
+  getPrefSides?: (edgeId: string) => { src?: string; tgt?: string } | null,
 ): number {
   const coEdges = allEdges.filter(e => {
     if (e.source === e.target) return false
     const eSrc = getNode(e.source)
     const eTgt = getNode(e.target)
     if (!eSrc || !eTgt) return false
-    const { srcPos, tgtPos } = getBestSides(eSrc, eTgt)
+    const pref = getPrefSides?.(e.id)
+    const { srcPos, tgtPos } = getBestSides(eSrc, eTgt,
+      strToPos(pref?.src), strToPos(pref?.tgt))
     // Count edges touching this entity on the given side — both as source and target
     if (e.source === entityId && srcPos === side) return true
     if (e.target === entityId && tgtPos === side) return true
@@ -116,14 +152,15 @@ export function getDistributedFraction(
 
 // Returns ARM endpoint in flow-space for a relationship at its source entity side.
 export function getSourceArmEndpoint(
-  rel: { id: string; sourceEntityId: string; targetEntityId: string },
+  rel: { id: string; sourceEntityId: string; targetEntityId: string; preferredSrc?: string; preferredTgt?: string },
   allEdges: Edge[],
   getNode: (id: string) => Node | undefined,
 ): { ax: number; ay: number; pos: Position } | null {
   const srcNode = getNode(rel.sourceEntityId)
   const tgtNode = getNode(rel.targetEntityId)
   if (!srcNode || !tgtNode) return null
-  const { srcPos } = getBestSides(srcNode, tgtNode)
+  const { srcPos } = getBestSides(srcNode, tgtNode,
+    strToPos(rel.preferredSrc), strToPos(rel.preferredTgt))
   const fraction = getDistributedFraction(rel.sourceEntityId, srcPos, rel.id, true, allEdges, getNode)
   const [sx, sy] = getHandleXYDistributed(srcNode, srcPos, fraction)
   const [ax, ay] = armEnd(sx, sy, srcPos)
