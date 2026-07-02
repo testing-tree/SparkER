@@ -115,7 +115,8 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
   const tgtOptional = rel.targetEnd.optionality === 'optional'
   const srcMany     = rel.sourceEnd.cardinality === 'many'
   const tgtMany     = rel.targetEnd.cardinality === 'many'
-  const stroke      = selected ? '#3b82f6' : '#1f2937'
+  const hasCustom   = !!(rel.sourceEnd.preferredSide || rel.targetEnd.preferredSide || rel.waypoints?.length)
+  const stroke      = selected ? (hasCustom ? '#059669' : '#3b82f6') : '#1f2937'
   const sw          = selected ? 2 : 1.5
 
   // ── Self-loop (ARM + arc + ARM, four corners) ──────────────────
@@ -498,7 +499,7 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
       {selected && userSide && (
         <circle
           cx={cornerX} cy={cornerY} r={5}
-          fill={dragPos ? '#60a5fa' : (wp0 ? '#60a5fa' : '#d1d5db')}
+          fill={dragPos ? '#60a5fa' : (wp0 ? '#059669' : '#d1d5db')}
           stroke="white" strokeWidth={2}
           style={{ cursor: dragPos ? 'grabbing' : 'grab', pointerEvents: 'all' }}
           onMouseDown={e => {

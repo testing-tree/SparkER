@@ -107,20 +107,13 @@ export const useDiagramStore = create<DiagramStore>()(
       },
 
       updateEntity(id, patch) {
-        set(s => {
-          const moved = patch.position !== undefined
-          return {
-            diagram: {
-              ...s.diagram,
-              entities: s.diagram.entities.map(e => e.id === id ? { ...e, ...patch } : e),
-              relationships: moved ? s.diagram.relationships.map(r => {
-                if (r.sourceEntityId !== id && r.targetEntityId !== id) return r
-                return { ...r, waypoints: undefined }
-              }) : s.diagram.relationships,
-              updatedAt: now(),
-            },
-          }
-        })
+        set(s => ({
+          diagram: {
+            ...s.diagram,
+            entities: s.diagram.entities.map(e => e.id === id ? { ...e, ...patch } : e),
+            updatedAt: now(),
+          },
+        }))
       },
 
       deleteEntity(id) {
