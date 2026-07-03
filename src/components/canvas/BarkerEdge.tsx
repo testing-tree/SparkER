@@ -497,8 +497,8 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
         </text>
       )}
 
-      {/* Draggable waypoint — only for edges with manually chosen side(s) */}
-      {selected && userSide && (
+      {/* Draggable waypoint — available whenever the edge is selected */}
+      {selected && (
         <circle
           cx={cornerX} cy={cornerY} r={5}
           fill={dragPos ? '#60a5fa' : (wp0 ? '#059669' : '#d1d5db')}

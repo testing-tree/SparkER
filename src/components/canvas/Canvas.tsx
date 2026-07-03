@@ -463,8 +463,8 @@ export default function Canvas() {
                 <p>Hover over an entity to reveal four blue <b>handles</b>. <b>Drag</b> from any handle to another entity. Click the line to configure cardinality and optionality in the right-side <b>Properties</b> panel. Click any <b>verb label</b> to flip it to the opposite side of the line.</p>
               </div>
               <div>
-                <p className="font-semibold text-gray-800 mb-1">Side selection</p>
-                <p>Select a relationship to show connection dots on each connected entity. <b>Click a dot</b> to route the line through that side. Click the side name in the Properties panel to restore auto-routing.</p>
+                <p className="font-semibold text-gray-800 mb-1">Custom routing</p>
+                <p>Select a relationship to show side dots on each entity and a draggable handle on the line. <b>Click a dot</b> to change the connection side. <b>Drag the handle</b> to reposition the bend freely. Custom elements turn <span style="color:#059669"><b>green</b></span>. <b>Double-click</b> a green dot or handle to reset it.</p>
               </div>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Canvas</p>
