@@ -464,7 +464,7 @@ export default function Canvas() {
               </div>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Custom routing</p>
-                <p>Select a relationship to show side dots on each entity and a draggable handle on the line. <b>Click a dot</b> to change the connection side. <b>Drag the handle</b> to reposition the bend freely. Custom elements turn <span style="color:#059669"><b>green</b></span>. <b>Double-click</b> a green dot or handle to reset it.</p>
+                <p>Select a relationship to show side dots on each entity and a draggable handle on the line. <b>Click a dot</b> to change the connection side. <b>Drag the handle</b> to reposition the bend freely. Custom elements turn <span style={{color:'#059669'}}><b>green</b></span>. <b>Double-click</b> a green dot or handle to reset it.</p>
               </div>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">Canvas</p>

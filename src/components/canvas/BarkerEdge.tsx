@@ -324,7 +324,6 @@ export default function BarkerEdge({ id, source, target, selected }: EdgeProps) 
     ? (!tgtBacktrackVH || tgtBacktrackHV)  // V-H default, swap to H-V if V-H backtracks and H-V doesn't
     : (tgtBacktrackHV && !tgtBacktrackVH)  // H-V default, swap to V-H if H-V backtracks and V-H doesn't
 
-  const userSide = !!(rel.sourceEnd.preferredSide || rel.targetEnd.preferredSide)
   const wp0 = rel.waypoints?.[0]
 
   // Waypoint overrides routing mode (tells us which corner the user chose).
